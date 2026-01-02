@@ -90,8 +90,7 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   const [hasMore, setHasMore] = useState(true);
 
   // 使用 useFetch 获取任务列表
-  const { data, isLoading, isError, error, refetch } =
-    useFetch<EnquiryJobResponse>(apiConfig.getJobList, { page, pageSize });
+  const { data, isLoading, isError, error, refetch } = useFetch<EnquiryJobResponse>(apiConfig.getJobList, { page, pageSize });
 
   // 启动任务的 mutation
   // const launchBatchJob = useMutate<ApiResponse>(apiConfig.launchJobList);
@@ -176,48 +175,17 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   }
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        minWidth: 0,
-        minHeight: 0,
-      }}
-    >
+    <Box sx={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
       {/* 顶部操作栏 */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
         <Box sx={{ flex: 1 }} />
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
-          onClick={handleCreateClick}
-          sx={{ ml: "auto" }}
-        >
+        <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleCreateClick} sx={{ ml: "auto" }}>
           Create
         </Button>
       </Box>
 
       {/* 表格组件 */}
-      <DynamicFormTable
-        title={menuTree.name}
-        columns={columns}
-        data={allData}
-        loading={isLoading}
-        error={isError ? error : null}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
-        enableInfiniteScroll={true}
-        extraRenderProps={{ launchBatchJob }}
-      />
+      <DynamicFormTable title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
     </Box>
   );
 }
