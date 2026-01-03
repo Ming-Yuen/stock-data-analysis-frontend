@@ -1,4 +1,4 @@
-import { ApiResponse } from "../../hooks/api";
+import { ApiResponse } from "./apiResponse";
 
 export interface LaunchJobRequest<T> {
   jobName: string;
@@ -11,13 +11,7 @@ export interface EnquiryJobRequest extends Record<string, unknown> {
   pageSize?: number;
 }
 
-export type TaskGroup =
-  | "STOCK"
-  | "STOCK_SCHEDULE"
-  | "STOCK_REPORT"
-  | "REPORT_SCHEDULE"
-  | "MAINTENANCE_SCHEDULE"
-  | "DEFAULT";
+export type TaskGroup = "STOCK" | "STOCK_SCHEDULE" | "STOCK_REPORT" | "REPORT_SCHEDULE" | "MAINTENANCE_SCHEDULE" | "DEFAULT";
 
 export interface Job {
   jobName: string;

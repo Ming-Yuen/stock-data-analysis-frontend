@@ -6,8 +6,11 @@ import { DynamicFormTableProps } from "./DynamicFormTable.types";
 import { TableDataCell } from "./TableDataCell";
 import { TableHeaderCell } from "./TableHeaderCell";
 import { TableFooter } from "./TableFooter";
+import { apiConfig } from "../../apiConfig";
+import { useMutate } from "../../hooks/api/useApi";
+import { SearchCriteriaConfigResponse } from "../../services/types/dto/searchCriteria";
 
-const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps }) => {
+const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps, pageKey }) => {
   const [rows, setRows] = useState<Record<string, any>[]>(initialRows);
 
   const useExternalData = externalData !== undefined;
@@ -39,6 +42,14 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   };
 
   const sortedData = sortField ? getSortedData(currentData) : currentData;
+
+  const [disabledSearchFields, setDisabledSearchCriteriaFields] = useState<string[]>([]);
+  const searchCriteriaConfig = useMutate<SearchCriteriaConfigResponse>(apiConfig.launchJobList, { pageKey: pageKey });
+  useEffect(() => {
+    if (searchCriteriaConfig.data?.disabledFields) {
+      setDisabledSearchCriteriaFields(searchCriteriaConfig.data.disabledFields);
+    }
+  }, [searchCriteriaConfig]);
 
   return (
     <Box sx={{ width: "100%", height: "100%" }}>

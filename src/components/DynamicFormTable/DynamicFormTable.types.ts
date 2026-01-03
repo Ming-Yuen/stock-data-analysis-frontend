@@ -6,12 +6,7 @@ export interface Column {
   type?: "text" | "number" | "select" | "date";
   selectOptions?: { label: string; value: string | number }[];
   width?: number | string;
-  render?: (
-    value: any,
-    row: any,
-    index: number,
-    extraProps?: any
-  ) => React.ReactNode;
+  render?: (value: any, row: any, index: number, extraProps?: any) => React.ReactNode;
   isActionColumn?: boolean;
   sortable?: boolean;
   sourceDateFormat?: string;
@@ -31,4 +26,5 @@ export interface DynamicFormTableProps {
   maxHeight?: number | string;
   enableInfiniteScroll?: boolean;
   extraRenderProps?: any;
+  pageKey: string;
 }

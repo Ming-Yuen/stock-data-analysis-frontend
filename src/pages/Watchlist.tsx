@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Box, Button } from "@mui/material";
 import { Add } from "@mui/icons-material";
-import { useFetch, useMutate } from "../hooks/useApi";
-import { ApiResponse } from "../hooks/api";
+import { useFetch, useMutate } from "../hooks/api/useApi";
+import { ApiResponse } from "../services/types/dto/apiResponse";
 import { MenuTree } from "../services/types/menu";
 import { apiConfig } from "../apiConfig";
 import { JobCreatePage } from "./JobCreate";
-import { StockSearch, StockSeatchResponse } from "../services/types/stock";
+import { StockSearch, StockSeatchResponse } from "../services/types/dto/stock";
 import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
 
@@ -37,8 +37,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   const [hasMore, setHasMore] = useState(true);
 
   // 使用 useFetch 获取任务列表
-  const { data, isLoading, isError, error, refetch } =
-    useFetch<StockSeatchResponse>(apiConfig.getStockSearch, { page, pageSize });
+  const { data, isLoading, isError, error, refetch } = useFetch<StockSeatchResponse>(apiConfig.getStockSearch, { page, pageSize });
 
   // 启动任务的 mutation
   const launchBatchJob = useMutate<ApiResponse>(apiConfig.getStockSearch, {
@@ -122,29 +121,13 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
         }}
       >
         <Box sx={{ flex: 1 }} />
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
-          onClick={handleCreateClick}
-          sx={{ ml: "auto" }}
-        >
+        <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleCreateClick} sx={{ ml: "auto" }}>
           Create
         </Button>
       </Box>
 
       {/* 表格组件 */}
-      <DynamicFormTable
-        title={menuTree.name}
-        columns={columns}
-        data={allData}
-        loading={isLoading}
-        error={isError ? error : null}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
-        enableInfiniteScroll={true}
-        extraRenderProps={{ launchBatchJob }}
-      />
+      <DynamicFormTable title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
     </Box>
   );
 }

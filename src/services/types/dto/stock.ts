@@ -1,4 +1,4 @@
-import { ApiResponse } from "../../hooks/api";
+import { ApiResponse } from "./apiResponse";
 
 export interface StockSeatchResponse extends ApiResponse {
   stockSearchList: StockSearch[];

@@ -3,7 +3,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./layouts/layout";
 import { JobManagementPage } from "./pages/JobManagement";
-import { useFetch } from "./hooks/useApi";
+import { useFetch } from "./hooks/api/useApi";
 import { apiConfig } from "./apiConfig";
 import { MenuEnquiryResponse, MenuTree } from "./services/types/menu";
 import { WatchListPage } from "./pages/Watchlist";
@@ -72,11 +72,7 @@ const generateRoutes = (menuTrees: MenuTree[]) => {
 };
 
 const App: React.FC = () => {
-  const {
-    data: menuData,
-    isPending,
-    error,
-  } = useFetch<MenuEnquiryResponse>(apiConfig.getMenu);
+  const { data: menuData, isPending, error } = useFetch<MenuEnquiryResponse>(apiConfig.getMenu);
 
   if (isPending) {
     return <div>Loading...</div>;

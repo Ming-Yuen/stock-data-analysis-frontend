@@ -1,16 +1,16 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Box, IconButton, Tooltip, Button } from "@mui/material";
 import { PlayArrow, Add } from "@mui/icons-material";
-import { useFetch, useMutate } from "../hooks/useApi";
-import { ApiResponse } from "../hooks/api";
-import { Job, EnquiryJobResponse } from "../services/types/batch";
-import { MenuTree } from "../services/types/menu";
+import { useFetch, useMutate } from "../hooks/api/useApi";
+import { ApiResponse } from "../services/types/dto/apiResponse";
+import { Job, EnquiryJobResponse } from "../services/types/dto/batch";
 import { apiConfig } from "../apiConfig";
-import { ActiveStatus } from "../services/types/ActiveStatus";
+import { ActiveStatus } from "../services/types/enums/ActiveStatus";
 import { JobCreatePage } from "./JobCreate";
 import { getStatusLabel, JobStatus } from "../services/types/status";
 import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
+import { MenuTree } from "../services/types/dto/menu";
 
 const columns: Column[] = [
   { id: "jobName", label: "Task Name", width: 200 },
@@ -91,35 +91,8 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
 
   // 使用 useFetch 获取任务列表
   const { data, isLoading, isError, error, refetch } = useFetch<EnquiryJobResponse>(apiConfig.getJobList, { page, pageSize });
+  const launchBatchJob = useMutate<ApiResponse>(apiConfig.launchJobList);
 
-  // 启动任务的 mutation
-  // const launchBatchJob = useMutate<ApiResponse>(apiConfig.launchJobList);
-  const launchBatchJob = useMutate<ApiResponse>(apiConfig.launchJobList, {
-    onSuccess: () => {
-      // 成功後重抓目前頁的列表
-      console.log("refresh");
-      refetch && refetch();
-    },
-  });
-
-  // const launchBatchJob = useMutate<LaunchJobResponse, LaunchJobVariables>(
-  //   apiConfig.launchJobList,
-  //   {
-  //     onSuccess: (resp, variables) => {
-  //       setAllData(prev =>
-  //         prev.map(job =>
-  //           job.jobName === variables.jobName
-  //             ? {
-  //                 ...job,
-  //                 lastExecutionTime: resp.lastExecutionTime,
-  //                 lastExecutionStatus: resp.lastExecutionStatus,
-  //               }
-  //             : job
-  //         )
-  //       );
-  //     },
-  //   }
-  // );
   // 处理创建按钮点击
   const handleCreateClick = () => {
     setShowCreatePage(true);
@@ -185,7 +158,7 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
       </Box>
 
       {/* 表格组件 */}
-      <DynamicFormTable title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
+      <DynamicFormTable pageKey="" title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
     </Box>
   );
 }

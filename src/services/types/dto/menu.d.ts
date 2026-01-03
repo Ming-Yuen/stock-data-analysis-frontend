@@ -1,4 +1,4 @@
-import { ApiResponse } from "../../hooks/api";
+import { ApiResponse } from "./dto/apiResponse";
 
 //menu
 export interface MenuTree {
