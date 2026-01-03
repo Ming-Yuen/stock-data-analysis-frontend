@@ -5,8 +5,8 @@ import Layout from "./layouts/layout";
 import { JobManagementPage } from "./pages/JobManagement";
 import { useFetch } from "./hooks/api/useApi";
 import { apiConfig } from "./apiConfig";
-import { MenuEnquiryResponse, MenuTree } from "./services/types/menu";
 import { WatchListPage } from "./pages/Watchlist";
+import { MenuTree, MenuEnquiryResponse } from "./services/types/dto/menu";
 
 // 页面配置接口
 interface PageConfig {

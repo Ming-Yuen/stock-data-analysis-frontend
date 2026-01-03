@@ -8,21 +8,17 @@ export function useFetch<T = any>(endpoint: ApiEndpoint, params?: Record<string,
     queryKey: [endpoint.url, endpoint.method, params],
     queryFn: () => {
       const serviceFunction = buildService(endpoint);
-      return serviceFunction({}, params); // GET: 空 data，有 params
+      return serviceFunction(params ?? {}, {});
     },
   });
 }
 
-export function useMutate<TResponse = any, TData extends Record<string, unknown> = Record<string, unknown>>(
-  endpoint: ApiEndpoint,
-  params?: Record<string, any>, // 第二个参数继续当 query params 用
-  options?: Parameters<typeof useMutation<TResponse, unknown, TData>>[0] // 第三个参数当 useMutation options
-): UseMutationResult<TResponse, unknown, TData> {
-  return useMutation({
+export function useMutate<TResponse = any, TData extends Record<string, unknown> = Record<string, unknown>>(endpoint: ApiEndpoint, params?: Record<string, any>, options?: Omit<Parameters<typeof useMutation<TResponse, unknown, TData>>[0], "mutationFn">): UseMutationResult<TResponse, unknown, TData> {
+  return useMutation<TResponse, unknown, TData>({
     mutationFn: (data: TData) => {
       const serviceFunction = buildService(endpoint);
-      return serviceFunction(data, params); // POST: data body, params query
+      return serviceFunction(data, params);
     },
-    ...options, // 把 onSuccess / onError 等透传进去
+    ...options,
   });
 }

@@ -152,13 +152,13 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
       {/* 顶部操作栏 */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
         <Box sx={{ flex: 1 }} />
-        <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleCreateClick} sx={{ ml: "auto" }}>
+        <Button variant="contained" color="primary" size="small" startIcon={<Add />} onClick={handleCreateClick} sx={{ ml: "auto" }}>
           Create
         </Button>
       </Box>
 
       {/* 表格组件 */}
-      <DynamicFormTable pageKey="" title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
+      <DynamicFormTable pageKey={menuTree.name} title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
     </Box>
   );
 }

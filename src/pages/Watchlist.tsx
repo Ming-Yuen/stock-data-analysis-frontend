@@ -3,12 +3,12 @@ import { Box, Button } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import { useFetch, useMutate } from "../hooks/api/useApi";
 import { ApiResponse } from "../services/types/dto/apiResponse";
-import { MenuTree } from "../services/types/menu";
 import { apiConfig } from "../apiConfig";
 import { JobCreatePage } from "./JobCreate";
 import { StockSearch, StockSeatchResponse } from "../services/types/dto/stock";
 import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
+import { MenuTree } from "../services/types/dto/menu";
 
 const columns: Column[] = [
   { id: "symbol", label: "Symbol", width: 200 },
@@ -127,7 +127,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       </Box>
 
       {/* 表格组件 */}
-      <DynamicFormTable title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
+      <DynamicFormTable pageKey={menuTree.name} title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
     </Box>
   );
 }

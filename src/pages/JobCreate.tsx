@@ -6,9 +6,9 @@ import { Save, Cancel } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { useMutate } from "../hooks/api/useApi";
 import { ApiResponse } from "../services/types/dto/apiResponse";
-import { MenuTree } from "../services/types/menu";
 import { TaskGroup } from "../services/types/dto/batch";
 import { ActiveStatus } from "../services/types/enums/ActiveStatus";
+import { MenuTree } from "../services/types/dto/menu";
 
 interface JobCreatePageProps {
   menuTree: MenuTree;

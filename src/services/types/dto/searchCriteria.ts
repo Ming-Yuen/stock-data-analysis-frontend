@@ -1,13 +1,13 @@
 import { ApiResponse } from "./apiResponse";
 
-export interface SearchCriteriaConfigRequest {
+export type SearchCriteriaConfigRequest = {
   pageKey: string;
-}
+};
 export interface SearchCriteriaConfigResponse extends ApiResponse {
   disabledFields: string[];
 }
-export interface UpdateCriteriaConfigRequest {
+export type UpdateCriteriaConfigRequest = {
   pageKey: string;
   disabledFields: string[];
-}
+};
 export interface UpdateCriteriaConfigResponse extends ApiResponse {}

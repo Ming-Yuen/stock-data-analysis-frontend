@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Box, Icon, Tabs, Tab, Paper } from "@mui/material";
 import { ExpandLess, ExpandMore, FolderOpen, Folder, Description, Close } from "@mui/icons-material";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { MenuTree } from "../services/types/menu";
+import { MenuTree } from "../services/types/dto/menu";
 
 const DRAWER_WIDTH = 240;
 
@@ -20,7 +20,7 @@ interface LayoutProps {
 
 const getStoredTabs = (): TabInfo[] => {
   try {
-    const stored = sessionStorage.getItem('layout-tabs');
+    const stored = sessionStorage.getItem("layout-tabs");
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
@@ -28,7 +28,7 @@ const getStoredTabs = (): TabInfo[] => {
 };
 
 const getStoredActiveTab = (): string => {
-  return sessionStorage.getItem('layout-activeTab') || "";
+  return sessionStorage.getItem("layout-activeTab") || "";
 };
 
 const Layout: React.FC<LayoutProps> = ({ menuData }) => {
@@ -39,14 +39,14 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
   const location = useLocation();
 
   useEffect(() => {
-    sessionStorage.setItem('layout-tabs', JSON.stringify(tabs));
+    sessionStorage.setItem("layout-tabs", JSON.stringify(tabs));
   }, [tabs]);
 
   useEffect(() => {
     if (activeTab) {
-      sessionStorage.setItem('layout-activeTab', activeTab);
+      sessionStorage.setItem("layout-activeTab", activeTab);
     } else {
-      sessionStorage.removeItem('layout-activeTab');
+      sessionStorage.removeItem("layout-activeTab");
     }
   }, [activeTab]);
 
@@ -59,7 +59,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
 
   // ✅ 檢查 activeTab 是否存在於 tabs 中（不檢查路由）
   useEffect(() => {
-    if (activeTab && tabs.length > 0 && !tabs.find(tab => tab.id === activeTab)) {
+    if (activeTab && tabs.length > 0 && !tabs.find((tab) => tab.id === activeTab)) {
       // activeTab 不在 tabs 列表中，選擇第一個 tab
       setActiveTab(tabs[0].id);
     }
@@ -69,8 +69,8 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
 
   const handleMenuClick = (item: MenuTree) => {
     if (!item.children?.length) {
-      const existingTab = tabs.find(tab => tab.menuId === item.menuId);
-      
+      const existingTab = tabs.find((tab) => tab.menuId === item.menuId);
+
       if (existingTab) {
         setActiveTab(existingTab.id);
         navigate(existingTab.path);
@@ -81,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
           path: item.path,
           menuId: item.menuId,
         };
-        
+
         const newTabs = [...tabs, newTab];
         setTabs(newTabs);
         setActiveTab(newTab.id);
@@ -92,7 +92,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
     if (newValue) {
-      const tab = tabs.find(t => t.id === newValue);
+      const tab = tabs.find((t) => t.id === newValue);
       if (tab) {
         setActiveTab(newValue);
         navigate(tab.path);
@@ -102,11 +102,11 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
 
   const handleCloseTab = (tabId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    
-    const tabIndex = tabs.findIndex(tab => tab.id === tabId);
+
+    const tabIndex = tabs.findIndex((tab) => tab.id === tabId);
     if (tabIndex === -1) return;
 
-    const newTabs = tabs.filter(tab => tab.id !== tabId);
+    const newTabs = tabs.filter((tab) => tab.id !== tabId);
     setTabs(newTabs);
 
     if (newTabs.length === 0) {
@@ -124,14 +124,12 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
     menus.map((item) => {
       const hasChildren = !!item.children?.length;
       const isOpen = openItems[item.menuId] || false;
-      
+
       return (
         <React.Fragment key={item.menuId}>
           <ListItem disablePadding sx={{ pl: 2 + level * 2 }}>
-            <ListItemButton onClick={() => hasChildren ? handleToggle(item.menuId) : handleMenuClick(item)}>
-              <ListItemIcon>
-                {item.icon ? <Icon>{item.icon}</Icon> : hasChildren ? (isOpen ? <FolderOpen /> : <Folder />) : <Description />}
-              </ListItemIcon>
+            <ListItemButton onClick={() => (hasChildren ? handleToggle(item.menuId) : handleMenuClick(item))}>
+              <ListItemIcon>{item.icon ? <Icon>{item.icon}</Icon> : hasChildren ? isOpen ? <FolderOpen /> : <Folder /> : <Description />}</ListItemIcon>
               <ListItemText primary={item.name} />
               {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
             </ListItemButton>
@@ -156,26 +154,26 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
           <Paper elevation={1} sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
             <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
               {tabs.map((tab) => (
-                <Tab 
-                  key={tab.id} 
-                  value={tab.id} 
+                <Tab
+                  key={tab.id}
+                  value={tab.id}
                   label={
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <span>{tab.label}</span>
-                      <Close 
-                        sx={{ 
-                          fontSize: 16, 
-                          ml: 1, 
-                          '&:hover': { backgroundColor: 'action.hover' }, 
-                          borderRadius: '50%', 
+                      <Close
+                        sx={{
+                          fontSize: 16,
+                          ml: 1,
+                          "&:hover": { backgroundColor: "action.hover" },
+                          borderRadius: "50%",
                           p: 0.5,
-                          cursor: 'pointer'
-                        }} 
-                        onClick={(event) => handleCloseTab(tab.id, event)} 
+                          cursor: "pointer",
+                        }}
+                        onClick={(event) => handleCloseTab(tab.id, event)}
                       />
                     </Box>
-                  } 
-                  sx={{ minHeight: 48, textTransform: 'none' }} 
+                  }
+                  sx={{ minHeight: 48, textTransform: "none" }}
                 />
               ))}
             </Tabs>
