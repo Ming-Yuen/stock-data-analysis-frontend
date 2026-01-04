@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { TableContainer, Table, TableHead, TableBody, TableRow, Paper, Box, Alert, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, FormGroup, FormControlLabel, Checkbox, Typography } from "@mui/material";
+import { TableContainer, Table, TableHead, TableBody, TableRow, Paper, Box, Alert, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, FormGroup, FormControlLabel, Checkbox, Typography, MenuItem, Select } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 
 import { useInfiniteScroll } from "./hooks/useInfiniteScroll";
 import { useTableSort } from "./hooks/useTableSort";
-import { DynamicFormTableProps } from "./DynamicFormTable.types";
+import { DynamicFormTableProps, Column } from "./DynamicFormTable.types";
 import { TableDataCell } from "./TableDataCell";
 import { TableHeaderCell } from "./TableHeaderCell";
 import { TableFooter } from "./TableFooter";
@@ -12,6 +12,21 @@ import { TableFooter } from "./TableFooter";
 import { apiConfig } from "../../apiConfig";
 import { useFetch, useMutate } from "../../hooks/api/useApi";
 import { SearchCriteriaConfigResponse, UpdateCriteriaConfigRequest, UpdateCriteriaConfigResponse } from "../../services/types/dto/searchCriteria";
+
+// ========= 搜尋 state 型別 =========
+type TextSearchValue = string;
+
+type NumberSearchValue = {
+  value: string;
+};
+
+type DateRangeSearchValue = {
+  from?: string;
+  to?: string;
+};
+
+type SearchValue = TextSearchValue | NumberSearchValue | DateRangeSearchValue;
+type SearchValuesState = Record<string, SearchValue>;
 
 // ===================================
 // DynamicFormTable
@@ -21,7 +36,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   const [rows, setRows] = useState<Record<string, any>[]>(initialRows);
 
   // 搜尋相關狀態
-  const [searchValues, setSearchValues] = useState<Record<string, string>>({});
+  const [searchValues, setSearchValues] = useState<SearchValuesState>({});
   const [disabledSearchFields, setDisabledSearchFields] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [localDisabledFields, setLocalDisabledFields] = useState<string[]>([]);
@@ -44,7 +59,9 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   });
 
   // ========== 1. 讀取搜尋欄位設定（disabledFields） ==========
-  const { data: criteriaConfig, isLoading: criteriaLoading } = useFetch<SearchCriteriaConfigResponse>(apiConfig.getSearchCriteriaConfig, { pageKey: pageKey }); // [web:72]
+  const { data: criteriaConfig, isLoading: criteriaLoading } = useFetch<SearchCriteriaConfigResponse>(apiConfig.getSearchCriteriaConfig, {
+    pageKey: pageKey,
+  }); // [web:22]
 
   useEffect(() => {
     if (criteriaConfig?.disabledFields) {
@@ -53,7 +70,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   }, [criteriaConfig]);
 
   // ========== 2. 更新搜尋欄位設定（disabledFields） ==========
-  const updateCriteriaMutation = useMutate<UpdateCriteriaConfigResponse, UpdateCriteriaConfigRequest>(apiConfig.updateSearchCriteriaConfig); // [web:75]
+  const updateCriteriaMutation = useMutate<UpdateCriteriaConfigResponse, UpdateCriteriaConfigRequest>(apiConfig.updateSearchCriteriaConfig); // [web:23]
 
   // rows 改變時通知外面
   useEffect(() => {
@@ -79,28 +96,133 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
   const sortedData = sortField ? getSortedData(currentData) : currentData;
 
-  // ========== 3. 搜尋邏輯 ==========
-  const handleSearchChange = (columnId: string, value: string) => {
-    setSearchValues((prev) => ({ ...prev, [columnId]: value }));
+  // ========== 3. 搜尋 value 更新 ==========
+  const handleTextSearchChange = (columnId: string, value: string) => {
+    setSearchValues((prev) => ({
+      ...prev,
+      [columnId]: value,
+    }));
   };
 
+  const handleNumberSearchChange = (columnId: string, value: string) => {
+    setSearchValues((prev) => ({
+      ...prev,
+      [columnId]: { value },
+    }));
+  };
+
+  const handleDateRangeChange = (columnId: string, key: "from" | "to", value: string) => {
+    setSearchValues((prev) => {
+      const prevVal = prev[columnId] as DateRangeSearchValue | undefined;
+      return {
+        ...prev,
+        [columnId]: {
+          ...(prevVal || {}),
+          [key]: value || undefined,
+        },
+      };
+    });
+  };
+
+  // 解析日期（可根據 col.sourceDateFormat 自行加 dayjs/moment）
+  const parseDateValue = (val: any, col: Column): Date | null => {
+    if (val == null) return null;
+    if (val instanceof Date) return val;
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  // 從表格數據自動生成 select options（若 column 本身沒提供）
+  const getSelectOptionsFromData = (col: Column) => {
+    if (col.selectOptions && col.selectOptions.length > 0) {
+      return col.selectOptions;
+    }
+    const unique = new Set<string>();
+    currentData.forEach((row) => {
+      const v = row[col.id];
+      if (v !== null && v !== undefined && v !== "") {
+        unique.add(String(v));
+      }
+    });
+    return Array.from(unique).map((v) => ({ label: v, value: v }));
+  };
+
+  // ========== 4. 搜尋 filter 邏輯 ==========
   const filteredData = useMemo(() => {
     if (!sortedData) return [];
 
-    const activeFilters = Object.entries(searchValues).filter(([field, value]) => value?.trim() && !disabledSearchFields.includes(field));
+    const activeFiltersEntries = Object.entries(searchValues).filter(([field, value]) => {
+      if (disabledSearchFields.includes(field)) return false;
+      const col = columns.find((c) => c.id === field);
+      if (!col) return false;
 
-    if (activeFilters.length === 0) return sortedData;
+      if (col.type === "number") {
+        const v = value as NumberSearchValue;
+        return v?.value !== undefined && v.value !== "";
+      }
+
+      if (col.type === "date" || col.type === "datetime") {
+        const v = value as DateRangeSearchValue;
+        return !!v?.from || !!v?.to;
+      }
+
+      return typeof value === "string" && value.trim() !== "";
+    });
+
+    if (activeFiltersEntries.length === 0) return sortedData;
 
     return sortedData.filter((row) =>
-      activeFilters.every(([field, value]) => {
+      activeFiltersEntries.every(([field, value]) => {
+        const col = columns.find((c) => c.id === field);
+        if (!col) return true;
+
         const cell = row[field];
-        if (cell == null) return false;
-        return String(cell).toLowerCase().includes(value.toLowerCase());
+
+        // text / select
+        if (!col.type || col.type === "text" || col.type === "select") {
+          const v = (value as TextSearchValue)?.trim();
+          if (!v) return true;
+          if (cell == null) return false;
+          return String(cell).toLowerCase().includes(v.toLowerCase());
+        }
+
+        // number
+        if (col.type === "number") {
+          const vObj = value as NumberSearchValue;
+          if (!vObj?.value && vObj.value !== "0") return true;
+          if (cell == null) return false;
+
+          const filterNum = Number(vObj.value);
+          if (isNaN(filterNum)) return true;
+
+          const cellNum = Number(cell);
+          if (isNaN(cellNum)) return false;
+
+          return cellNum === filterNum;
+        }
+
+        // date / datetime
+        if (col.type === "date" || col.type === "datetime") {
+          const v = value as DateRangeSearchValue;
+          const from = v?.from ? new Date(v.from) : undefined;
+          const to = v?.to ? new Date(v.to) : undefined;
+
+          if (!from && !to) return true;
+          const cellDate = parseDateValue(cell, col);
+          if (!cellDate) return false;
+
+          const time = cellDate.getTime();
+          if (from && time < from.getTime()) return false;
+          if (to && time > to.getTime()) return false;
+          return true;
+        }
+
+        return true;
       })
     );
-  }, [sortedData, searchValues, disabledSearchFields]); // [web:73]
+  }, [sortedData, searchValues, disabledSearchFields, columns]); // [web:31]
 
-  // ========== 4. 設定 Dialog ==========
+  // ========== 5. 設定 Dialog ==========
   useEffect(() => {
     if (settingsOpen) {
       setLocalDisabledFields(disabledSearchFields);
@@ -113,8 +235,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
   const handleSaveSettings = () => {
     setDisabledSearchFields(localDisabledFields);
-    console.log(pageKey);
-    console.log(localDisabledFields);
     if (pageKey) {
       updateCriteriaMutation.mutate({
         pageKey,
@@ -124,7 +244,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     setSettingsOpen(false);
   };
 
-  // ========== 5. 搜尋區高度調整（拖動 bar） ==========
+  // ========== 6. 搜尋區高度調整（拖動 bar） ==========
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsResizing(true);
@@ -135,7 +255,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     const delta = e.movementY;
     setSearchPanelHeight((prev) => {
       const next = prev + delta;
-      return Math.min(Math.max(next, 80), 320); // 限制高度 80~320
+      return Math.min(Math.max(next, 80), 320);
     });
   };
 
@@ -159,7 +279,107 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     };
   }, [isResizing]);
 
-  // ========== 6. Render ==========
+  // ========== 7. Render 搜尋欄位（依 type） ==========
+  const renderSearchField = (col: Column) => {
+    if (col.isActionColumn) return null;
+    if (disabledSearchFields.includes(col.id)) return null;
+
+    // select：用 dropdown（優先用 col.selectOptions，否則從 data 生成）
+    if (col.type === "select") {
+      const value = (searchValues[col.id] as TextSearchValue) ?? "";
+      const options = getSelectOptionsFromData(col);
+      return (
+        <Select size="small" fullWidth displayEmpty value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value as string)}>
+          <MenuItem value="">
+            <em>All</em>
+          </MenuItem>
+          {options.map((opt) => (
+            <MenuItem key={opt.value} value={String(opt.value)}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      );
+    }
+
+    // text
+    if (!col.type || col.type === "text") {
+      const value = (searchValues[col.id] as TextSearchValue) ?? "";
+      return <TextField size="small" fullWidth value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value)} />;
+    }
+
+    // number
+    if (col.type === "number") {
+      const vObj = (searchValues[col.id] as NumberSearchValue) || {
+        value: "",
+      };
+      return (
+        <TextField
+          size="small"
+          fullWidth
+          type="number"
+          value={vObj.value}
+          onChange={(e) => handleNumberSearchChange(col.id, e.target.value)}
+          inputProps={{
+            inputMode: "numeric",
+            pattern: "[0-9]*",
+          }}
+        />
+      );
+    }
+
+    // date / datetime：from / to
+    if (col.type === "date" || col.type === "datetime") {
+      const v = (searchValues[col.id] as DateRangeSearchValue) || {};
+      const isDateOnly = col.type === "date";
+      return (
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <TextField size="small" fullWidth label="From" type={isDateOnly ? "date" : "datetime-local"} value={v.from ?? ""} onChange={(e) => handleDateRangeChange(col.id, "from", e.target.value)} InputLabelProps={{ shrink: true }} />
+          <TextField size="small" fullWidth label="To" type={isDateOnly ? "date" : "datetime-local"} value={v.to ?? ""} onChange={(e) => handleDateRangeChange(col.id, "to", e.target.value)} InputLabelProps={{ shrink: true }} />
+        </Box>
+      );
+    }
+
+    // fallback -> text
+    const value = (searchValues[col.id] as TextSearchValue) ?? "";
+    return <TextField size="small" fullWidth value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value)} />;
+  };
+
+  // 把欄位依「一行兩個普通欄位 + 範圍欄位單獨一行」分組
+  const buildSearchRows = (visibleColumns: Column[]): Column[][] => {
+    const rows: Column[][] = [];
+    let currentRow: Column[] = [];
+
+    visibleColumns.forEach((col) => {
+      const isRangeType = col.type === "date" || col.type === "datetime";
+
+      if (isRangeType) {
+        if (currentRow.length > 0) {
+          rows.push(currentRow);
+          currentRow = [];
+        }
+        rows.push([col]);
+        return;
+      }
+
+      currentRow.push(col);
+      if (currentRow.length === 2) {
+        rows.push(currentRow);
+        currentRow = [];
+      }
+    });
+
+    if (currentRow.length > 0) {
+      rows.push(currentRow);
+    }
+
+    return rows;
+  };
+
+  // ========== 8. Render ==========
+  const visibleSearchColumns = columns.filter((col) => !col.isActionColumn && !disabledSearchFields.includes(col.id));
+  const searchRows = buildSearchRows(visibleSearchColumns);
+
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
       {currentError && (
@@ -168,45 +388,72 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         </Alert>
       )}
 
-      {/* 搜尋區：左側窄欄放設定 icon，右側是多列自動換行的 search criteria */}
+      {/* 搜尋區：左側設定 icon，右側 search criteria */}
       <Box sx={{ mb: 1 }}>
         <Box sx={{ display: "flex", gap: 2 }}>
-          {/* 左側 setting column（狹窄，只在第一行放設定按鈕） */}
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", pt: 0.5 }}>
+          {/* 左側 setting column */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              pt: 0.5,
+            }}
+          >
             <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ mt: 0.5 }}>
               <SettingsIcon fontSize="small" />
             </IconButton>
           </Box>
 
-          {/* 右側 search field 區：多列 + 自動換行 + 可滾動 */}
+          {/* 右側 search field 區：按 row 分組 + 可滾動，靠左 */}
           {!criteriaLoading && (
-            <Box sx={{ flex: 1, height: searchPanelHeight, overflowY: "auto", pr: 1 }}>
-              <Box sx={{ display: "flex", flexWrap: "wrap", columnGap: 2, rowGap: 1.5 }}>
-                {columns
-                  .filter((col) => !col.isActionColumn && !disabledSearchFields.includes(col.id))
-                  .map((col) => (
-                    <Box
-                      key={col.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        // 一行多個 field，寬度不夠自動換行
-                        width: { xs: "100%", sm: "48%", md: "32%" },
-                        minWidth: 260,
-                        maxWidth: 360,
-                      }}
-                    >
-                      {/* 左邊 label */}
-                      <Box sx={{ width: 120, textAlign: "right", pr: 1 }}>
-                        <Typography variant="body2">{col.label ?? col.id}</Typography>
-                      </Box>
-
-                      {/* 右邊 TextField */}
-                      <Box sx={{ flex: 1 }}>
-                        <TextField size="small" fullWidth value={searchValues[col.id] ?? ""} onChange={(e) => handleSearchChange(col.id, e.target.value)} />
-                      </Box>
-                    </Box>
-                  ))}
+            <Box
+              sx={{
+                flex: 1,
+                height: searchPanelHeight,
+                overflowY: "auto",
+                pr: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
+                  maxWidth: 900, // 原 1100，收窄一點
+                  width: "100%",
+                }}
+              >
+                {searchRows.map((rowCols, rowIndex) => (
+                  <Box
+                    key={rowIndex}
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                    }}
+                  >
+                    {rowCols.map((col) => {
+                      const isRangeType = col.type === "date" || col.type === "datetime";
+                      return (
+                        <Box
+                          key={col.id}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            flex: isRangeType ? "1 1 100%" : "1 1 50%",
+                            minWidth: isRangeType ? 320 : 260,
+                            maxWidth: isRangeType ? 900 : 420, // 普通欄位 420，整體更小
+                          }}
+                        >
+                          <Box sx={{ width: 120, textAlign: "right", pr: 1 }}>
+                            <Typography variant="body2">{col.label ?? col.id}</Typography>
+                          </Box>
+                          <Box sx={{ flex: 1 }}>{renderSearchField(col)}</Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                ))}
               </Box>
             </Box>
           )}
@@ -214,9 +461,28 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       </Box>
 
       {/* 搜尋區與表格之間的 bar，可拖動調整搜尋區高度 */}
-      <Box onMouseDown={handleMouseDown} sx={{ height: 6, cursor: "row-resize", bgcolor: "#e0e0e0", mb: 1, borderRadius: 3 }} />
+      <Box
+        onMouseDown={handleMouseDown}
+        sx={{
+          height: 6,
+          cursor: "row-resize",
+          bgcolor: "#e0e0e0",
+          mb: 1,
+          borderRadius: 3,
+        }}
+      />
 
-      <TableContainer component={Paper} sx={{ boxShadow: "none", border: "none", borderRadius: 0, backgroundColor: "background.default", maxHeight: maxHeight ?? "none" }} elevation={0}>
+      <TableContainer
+        component={Paper}
+        sx={{
+          boxShadow: "none",
+          border: "none",
+          borderRadius: 0,
+          backgroundColor: "background.default",
+          maxHeight: maxHeight ?? "none",
+        }}
+        elevation={0}
+      >
         <Table
           size="small"
           stickyHeader

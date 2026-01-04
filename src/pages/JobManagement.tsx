@@ -18,6 +18,7 @@ const columns: Column[] = [
   {
     id: "activeStatus",
     label: "Active",
+    type: "select",
     width: 120,
     render: (value, row, index) => {
       if (value === ActiveStatus.ACTIVE) {
@@ -32,7 +33,7 @@ const columns: Column[] = [
     id: "lastExecutionTime",
     label: "Execute time",
     width: 200,
-    type: "date",
+    type: "datetime",
     displayDateFormat: "yyyy-MM-dd HH:mm:ss",
   },
   {

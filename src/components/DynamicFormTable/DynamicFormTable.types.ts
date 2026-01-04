@@ -3,7 +3,7 @@ import React from "react";
 export interface Column {
   id: string;
   label: string;
-  type?: "text" | "number" | "select" | "date";
+  type?: "text" | "number" | "select" | "date" | "datetime";
   selectOptions?: { label: string; value: string | number }[];
   width?: number | string;
   render?: (value: any, row: any, index: number, extraProps?: any) => React.ReactNode;
