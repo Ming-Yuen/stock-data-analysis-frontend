@@ -31,7 +31,22 @@ type SearchValuesState = Record<string, SearchValue>;
 // ===================================
 // DynamicFormTable
 // ===================================
-const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps, pageKey }) => {
+const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
+  columns,
+  initialRows = [],
+  onRowsChange,
+  data: externalData,
+  loading = false,
+  error = null,
+  hasMore = false,
+  onLoadMore,
+  maxHeight,
+  enableInfiniteScroll = true,
+  extraRenderProps,
+  pageKey,
+  // 外部傳入 toolbar 區域（通常放「新增 create」按鈕）
+  toolbarActions,
+}) => {
   // 本地 rows（只有在非外部數據模式才用）
   const [rows, setRows] = useState<Record<string, any>[]>(initialRows);
 
@@ -61,7 +76,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   // ========== 1. 讀取搜尋欄位設定（disabledFields） ==========
   const { data: criteriaConfig, isLoading: criteriaLoading } = useFetch<SearchCriteriaConfigResponse>(apiConfig.getSearchCriteriaConfig, {
     pageKey: pageKey,
-  }); // [web:22]
+  });
 
   useEffect(() => {
     if (criteriaConfig?.disabledFields) {
@@ -70,7 +85,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   }, [criteriaConfig]);
 
   // ========== 2. 更新搜尋欄位設定（disabledFields） ==========
-  const updateCriteriaMutation = useMutate<UpdateCriteriaConfigResponse, UpdateCriteriaConfigRequest>(apiConfig.updateSearchCriteriaConfig); // [web:23]
+  const updateCriteriaMutation = useMutate<UpdateCriteriaConfigResponse, UpdateCriteriaConfigRequest>(apiConfig.updateSearchCriteriaConfig);
 
   // rows 改變時通知外面
   useEffect(() => {
@@ -122,6 +137,11 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         },
       };
     });
+  };
+
+  // 新增：清除全部搜尋條件
+  const handleClearAllSearch = () => {
+    setSearchValues({});
   };
 
   // 解析日期（可根據 col.sourceDateFormat 自行加 dayjs/moment）
@@ -220,7 +240,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         return true;
       })
     );
-  }, [sortedData, searchValues, disabledSearchFields, columns]); // [web:31]
+  }, [sortedData, searchValues, disabledSearchFields, columns]);
 
   // ========== 5. 設定 Dialog ==========
   useEffect(() => {
@@ -382,82 +402,85 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
+      {/* 上方：所有操作都在右邊，順序：清除 -> 設定 -> toolbarActions */}
+      <Box
+        sx={{
+          mb: 1,
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Button variant="outlined" size="small" onClick={handleClearAllSearch}>
+            Clear
+          </Button>
+          <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ mt: 0.2 }}>
+            <SettingsIcon fontSize="small" />
+          </IconButton>
+          {toolbarActions}
+        </Box>
+      </Box>
+
       {currentError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           錯誤：{currentError.message}
         </Alert>
       )}
 
-      {/* 搜尋區：左側設定 icon，右側 search criteria */}
+      {/* 搜尋區 */}
       <Box sx={{ mb: 1 }}>
-        <Box sx={{ display: "flex", gap: 2 }}>
-          {/* 左側 setting column */}
+        {!criteriaLoading && (
           <Box
             sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              pt: 0.5,
+              flex: 1,
+              height: searchPanelHeight,
+              overflowY: "auto",
+              pr: 1,
             }}
           >
-            <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ mt: 0.5 }}>
-              <SettingsIcon fontSize="small" />
-            </IconButton>
-          </Box>
-
-          {/* 右側 search field 區：按 row 分組 + 可滾動，靠左 */}
-          {!criteriaLoading && (
             <Box
               sx={{
-                flex: 1,
-                height: searchPanelHeight,
-                overflowY: "auto",
-                pr: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+                maxWidth: 900,
+                width: "100%",
               }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.5,
-                  maxWidth: 900, // 原 1100，收窄一點
-                  width: "100%",
-                }}
-              >
-                {searchRows.map((rowCols, rowIndex) => (
-                  <Box
-                    key={rowIndex}
-                    sx={{
-                      display: "flex",
-                      gap: 2,
-                    }}
-                  >
-                    {rowCols.map((col) => {
-                      const isRangeType = col.type === "date" || col.type === "datetime";
-                      return (
-                        <Box
-                          key={col.id}
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            flex: isRangeType ? "1 1 100%" : "1 1 50%",
-                            minWidth: isRangeType ? 320 : 260,
-                            maxWidth: isRangeType ? 900 : 420, // 普通欄位 420，整體更小
-                          }}
-                        >
-                          <Box sx={{ width: 120, textAlign: "right", pr: 1 }}>
-                            <Typography variant="body2">{col.label ?? col.id}</Typography>
-                          </Box>
-                          <Box sx={{ flex: 1 }}>{renderSearchField(col)}</Box>
+              {searchRows.map((rowCols, rowIndex) => (
+                <Box
+                  key={rowIndex}
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                  }}
+                >
+                  {rowCols.map((col) => {
+                    const isRangeType = col.type === "date" || col.type === "datetime";
+                    return (
+                      <Box
+                        key={col.id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          flex: isRangeType ? "1 1 100%" : "1 1 50%",
+                          minWidth: isRangeType ? 320 : 260,
+                          maxWidth: isRangeType ? 900 : 420,
+                        }}
+                      >
+                        <Box sx={{ width: 120, textAlign: "right", pr: 1 }}>
+                          <Typography variant="body2">{col.label ?? col.id}</Typography>
                         </Box>
-                      );
-                    })}
-                  </Box>
-                ))}
-              </Box>
+                        <Box sx={{ flex: 1 }}>{renderSearchField(col)}</Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ))}
             </Box>
-          )}
-        </Box>
+          </Box>
+        )}
       </Box>
 
       {/* 搜尋區與表格之間的 bar，可拖動調整搜尋區高度 */}

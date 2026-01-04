@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Box, Button } from "@mui/material";
-import { Add } from "@mui/icons-material";
 import { useFetch, useMutate } from "../hooks/api/useApi";
 import { ApiResponse } from "../services/types/dto/apiResponse";
 import { apiConfig } from "../apiConfig";
@@ -12,14 +11,16 @@ import { MenuTree } from "../services/types/dto/menu";
 
 const columns: Column[] = [
   { id: "symbol", label: "Symbol", width: 200 },
-  { id: "quoteDate", label: "Quote Date", width: 200 },
+  { id: "quoteDate", type: "date", label: "Quote Date", width: 200 },
   {
     id: "closePrice",
+    type: "number",
     label: "Close Price",
     width: 200,
   },
   {
     id: "stockPe",
+    type: "number",
     label: "PE",
     width: 200,
   },
@@ -111,21 +112,6 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
         minHeight: 0,
       }}
     >
-      {/* 顶部操作栏 */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Box sx={{ flex: 1 }} />
-        <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleCreateClick} sx={{ ml: "auto" }}>
-          Create
-        </Button>
-      </Box>
-
       {/* 表格组件 */}
       <DynamicFormTable pageKey={menuTree.name} title={menuTree.name} columns={columns} data={allData} loading={isLoading} error={isError ? error : null} hasMore={hasMore} onLoadMore={handleLoadMore} enableInfiniteScroll={true} extraRenderProps={{ launchBatchJob }} />
     </Box>

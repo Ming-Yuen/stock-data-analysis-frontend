@@ -27,4 +27,5 @@ export interface DynamicFormTableProps {
   enableInfiniteScroll?: boolean;
   extraRenderProps?: any;
   pageKey: string;
+  toolbarActions?: React.ReactNode;
 }
