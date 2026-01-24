@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  TableRow,
-  TableCell,
-  Box,
-  Typography,
-  Button,
-  CircularProgress,
-} from "@mui/material";
+import { TableRow, TableCell, Box, Typography, Button, CircularProgress } from "@mui/material";
 import { Add } from "@mui/icons-material";
 
 export interface TableFooterProps {
@@ -18,14 +11,7 @@ export interface TableFooterProps {
   onAddRow?: () => void;
 }
 
-export const TableFooter: React.FC<TableFooterProps> = ({
-  colSpan,
-  isExternal,
-  enableInfiniteScroll,
-  hasMore,
-  isLoading,
-  onAddRow,
-}) => {
+export const TableFooter: React.FC<TableFooterProps> = ({ colSpan, isExternal, enableInfiniteScroll, hasMore, isLoading, onAddRow }) => {
   return (
     <>
       {enableInfiniteScroll && hasMore && (
@@ -39,7 +25,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                 py: 2,
               }}
             >
-              {isLoading ? (
+              {/* {isLoading ? (
                 <>
                   <CircularProgress size={20} sx={{ mr: 1 }} />
                   <Typography variant="body2">載入中...</Typography>
@@ -48,7 +34,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
                 <Typography variant="body2" color="text.secondary">
                   滾動加載更多
                 </Typography>
-              )}
+              )} */}
             </Box>
           </TableCell>
         </TableRow>
@@ -57,12 +43,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
       {!isExternal && (
         <TableRow>
           <TableCell colSpan={colSpan} align="center">
-            <Button
-              startIcon={<Add />}
-              onClick={onAddRow}
-              variant="outlined"
-              size="small"
-            >
+            <Button startIcon={<Add />} onClick={onAddRow} variant="outlined" size="small">
               新增列
             </Button>
           </TableCell>

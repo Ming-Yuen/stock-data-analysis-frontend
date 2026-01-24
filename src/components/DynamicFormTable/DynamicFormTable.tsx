@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { TableContainer, Table, TableHead, TableBody, TableRow, Paper, Box, Alert, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, FormGroup, FormControlLabel, Checkbox, Typography, MenuItem, Select } from "@mui/material";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { TableContainer, Table, TableHead, TableBody, TableRow, Paper, Box, Alert, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, FormGroup, FormControlLabel, Checkbox, Typography, MenuItem, Select, Stack } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
+import { Search } from "@mui/icons-material";
 
 import { useInfiniteScroll } from "./hooks/useInfiniteScroll";
 import { useTableSort } from "./hooks/useTableSort";
@@ -28,9 +29,6 @@ type DateRangeSearchValue = {
 type SearchValue = TextSearchValue | NumberSearchValue | DateRangeSearchValue;
 type SearchValuesState = Record<string, SearchValue>;
 
-// ===================================
-// DynamicFormTable
-// ===================================
 const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
   columns,
   initialRows = [],
@@ -44,19 +42,16 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
   enableInfiniteScroll = true,
   extraRenderProps,
   pageKey,
-  // 外部傳入 toolbar 區域（通常放「新增 create」按鈕）
   toolbarActions,
+  onSearch, // 新增：由父组件传入
 }) => {
-  // 本地 rows（只有在非外部數據模式才用）
   const [rows, setRows] = useState<Record<string, any>[]>(initialRows);
 
-  // 搜尋相關狀態
   const [searchValues, setSearchValues] = useState<SearchValuesState>({});
   const [disabledSearchFields, setDisabledSearchFields] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [localDisabledFields, setLocalDisabledFields] = useState<string[]>([]);
 
-  // 搜尋區高度（可拉動的 bar 控制）
   const [searchPanelHeight, setSearchPanelHeight] = useState<number>(180);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -73,7 +68,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     isLoading: currentLoading,
   });
 
-  // ========== 1. 讀取搜尋欄位設定（disabledFields） ==========
+  // 1) 讀取搜尋欄位設定
   const { data: criteriaConfig, isLoading: criteriaLoading } = useFetch<SearchCriteriaConfigResponse>(apiConfig.getSearchCriteriaConfig, {
     pageKey: pageKey,
   });
@@ -84,10 +79,9 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     }
   }, [criteriaConfig]);
 
-  // ========== 2. 更新搜尋欄位設定（disabledFields） ==========
+  // 2) 更新搜尋欄位設定
   const updateCriteriaMutation = useMutate<UpdateCriteriaConfigResponse, UpdateCriteriaConfigRequest>(apiConfig.updateSearchCriteriaConfig);
 
-  // rows 改變時通知外面
   useEffect(() => {
     if (!useExternalData) {
       onRowsChange?.(rows);
@@ -111,19 +105,13 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
   const sortedData = sortField ? getSortedData(currentData) : currentData;
 
-  // ========== 3. 搜尋 value 更新 ==========
+  // 搜尋值更新
   const handleTextSearchChange = (columnId: string, value: string) => {
-    setSearchValues((prev) => ({
-      ...prev,
-      [columnId]: value,
-    }));
+    setSearchValues((prev) => ({ ...prev, [columnId]: value }));
   };
 
   const handleNumberSearchChange = (columnId: string, value: string) => {
-    setSearchValues((prev) => ({
-      ...prev,
-      [columnId]: { value },
-    }));
+    setSearchValues((prev) => ({ ...prev, [columnId]: { value } }));
   };
 
   const handleDateRangeChange = (columnId: string, key: "from" | "to", value: string) => {
@@ -139,12 +127,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     });
   };
 
-  // 新增：清除全部搜尋條件
   const handleClearAllSearch = () => {
     setSearchValues({});
   };
 
-  // 解析日期（可根據 col.sourceDateFormat 自行加 dayjs/moment）
   const parseDateValue = (val: any, col: Column): Date | null => {
     if (val == null) return null;
     if (val instanceof Date) return val;
@@ -152,7 +138,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     return isNaN(d.getTime()) ? null : d;
   };
 
-  // 從表格數據自動生成 select options（若 column 本身沒提供）
   const getSelectOptionsFromData = (col: Column) => {
     if (col.selectOptions && col.selectOptions.length > 0) {
       return col.selectOptions;
@@ -167,7 +152,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     return Array.from(unique).map((v) => ({ label: v, value: v }));
   };
 
-  // ========== 4. 搜尋 filter 邏輯 ==========
+  // 过滤后的表格数据（你原本的前端过滤）
   const filteredData = useMemo(() => {
     if (!sortedData) return [];
 
@@ -198,7 +183,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
         const cell = row[field];
 
-        // text / select
         if (!col.type || col.type === "text" || col.type === "select") {
           const v = (value as TextSearchValue)?.trim();
           if (!v) return true;
@@ -206,7 +190,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
           return String(cell).toLowerCase().includes(v.toLowerCase());
         }
 
-        // number
         if (col.type === "number") {
           const vObj = value as NumberSearchValue;
           if (!vObj?.value && vObj.value !== "0") return true;
@@ -221,7 +204,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
           return cellNum === filterNum;
         }
 
-        // date / datetime
         if (col.type === "date" || col.type === "datetime") {
           const v = value as DateRangeSearchValue;
           const from = v?.from ? new Date(v.from) : undefined;
@@ -242,7 +224,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     );
   }, [sortedData, searchValues, disabledSearchFields, columns]);
 
-  // ========== 5. 設定 Dialog ==========
+  // settings dialog
   useEffect(() => {
     if (settingsOpen) {
       setLocalDisabledFields(disabledSearchFields);
@@ -264,7 +246,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     setSettingsOpen(false);
   };
 
-  // ========== 6. 搜尋區高度調整（拖動 bar） ==========
+  // resize
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsResizing(true);
@@ -280,9 +262,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
   };
 
   const handleMouseUp = () => {
-    if (isResizing) {
-      setIsResizing(false);
-    }
+    if (isResizing) setIsResizing(false);
   };
 
   useEffect(() => {
@@ -299,12 +279,48 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     };
   }, [isResizing]);
 
-  // ========== 7. Render 搜尋欄位（依 type） ==========
+  // ===== 新增：把 searchValues 变成“非空 criteria” =====
+  const buildCriteria = useCallback((values: SearchValuesState) => {
+    const criteria: Record<string, any> = {};
+
+    Object.entries(values).forEach(([field, v]) => {
+      // text / select
+      if (typeof v === "string") {
+        const s = v.trim();
+        if (s !== "") criteria[field] = s;
+        return;
+      }
+
+      // number: { value }
+      if (v && typeof v === "object" && "value" in v) {
+        const s = String((v as NumberSearchValue).value ?? "").trim();
+        if (s !== "") criteria[field] = Number(s);
+        return;
+      }
+
+      // date range: { from, to }
+      if (v && typeof v === "object" && ("from" in v || "to" in v)) {
+        const dr = v as DateRangeSearchValue;
+        const from = dr.from || undefined;
+        const to = dr.to || undefined;
+        if (from || to) criteria[field] = { from, to };
+        return;
+      }
+    });
+
+    return criteria;
+  }, []);
+
+  const handleSearchClick = () => {
+    const criteria = buildCriteria(searchValues);
+    onSearch?.(criteria);
+  };
+
+  // Render search field
   const renderSearchField = (col: Column) => {
     if (col.isActionColumn) return null;
     if (disabledSearchFields.includes(col.id)) return null;
 
-    // select：用 dropdown（優先用 col.selectOptions，否則從 data 生成）
     if (col.type === "select") {
       const value = (searchValues[col.id] as TextSearchValue) ?? "";
       const options = getSelectOptionsFromData(col);
@@ -322,33 +338,16 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       );
     }
 
-    // text
     if (!col.type || col.type === "text") {
       const value = (searchValues[col.id] as TextSearchValue) ?? "";
       return <TextField size="small" fullWidth value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value)} />;
     }
 
-    // number
     if (col.type === "number") {
-      const vObj = (searchValues[col.id] as NumberSearchValue) || {
-        value: "",
-      };
-      return (
-        <TextField
-          size="small"
-          fullWidth
-          type="number"
-          value={vObj.value}
-          onChange={(e) => handleNumberSearchChange(col.id, e.target.value)}
-          inputProps={{
-            inputMode: "numeric",
-            pattern: "[0-9]*",
-          }}
-        />
-      );
+      const vObj = (searchValues[col.id] as NumberSearchValue) || { value: "" };
+      return <TextField size="small" fullWidth type="number" value={vObj.value} onChange={(e) => handleNumberSearchChange(col.id, e.target.value)} inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }} />;
     }
 
-    // date / datetime：from / to
     if (col.type === "date" || col.type === "datetime") {
       const v = (searchValues[col.id] as DateRangeSearchValue) || {};
       const isDateOnly = col.type === "date";
@@ -360,12 +359,11 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       );
     }
 
-    // fallback -> text
     const value = (searchValues[col.id] as TextSearchValue) ?? "";
     return <TextField size="small" fullWidth value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value)} />;
   };
 
-  // 把欄位依「一行兩個普通欄位 + 範圍欄位單獨一行」分組
+  // build rows
   const buildSearchRows = (visibleColumns: Column[]): Column[][] => {
     const rows: Column[][] = [];
     let currentRow: Column[] = [];
@@ -389,20 +387,16 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       }
     });
 
-    if (currentRow.length > 0) {
-      rows.push(currentRow);
-    }
-
+    if (currentRow.length > 0) rows.push(currentRow);
     return rows;
   };
 
-  // ========== 8. Render ==========
   const visibleSearchColumns = columns.filter((col) => !col.isActionColumn && !disabledSearchFields.includes(col.id));
   const searchRows = buildSearchRows(visibleSearchColumns);
 
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
-      {/* 上方：所有操作都在右邊，順序：清除 -> 設定 -> toolbarActions */}
+      {/* 右上角按钮区：Clear / Settings / Search / 外部 toolbarActions */}
       <Box
         sx={{
           mb: 1,
@@ -411,34 +405,33 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
           alignItems: "center",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Stack direction="row" spacing={1} alignItems="center">
           <Button variant="outlined" size="small" onClick={handleClearAllSearch}>
             Clear
           </Button>
+
           <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ mt: 0.2 }}>
             <SettingsIcon fontSize="small" />
           </IconButton>
+
+          <Button variant="outlined" size="small" startIcon={<Search />} onClick={handleSearchClick}>
+            Search
+          </Button>
+
           {toolbarActions}
-        </Box>
+        </Stack>
       </Box>
 
       {currentError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          錯誤：{currentError.message}
+          錯誤：{(currentError as any).message}
         </Alert>
       )}
 
       {/* 搜尋區 */}
       <Box sx={{ mb: 1 }}>
         {!criteriaLoading && (
-          <Box
-            sx={{
-              flex: 1,
-              height: searchPanelHeight,
-              overflowY: "auto",
-              pr: 1,
-            }}
-          >
+          <Box sx={{ flex: 1, height: searchPanelHeight, overflowY: "auto", pr: 1 }}>
             <Box
               sx={{
                 display: "flex",
@@ -449,13 +442,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
               }}
             >
               {searchRows.map((rowCols, rowIndex) => (
-                <Box
-                  key={rowIndex}
-                  sx={{
-                    display: "flex",
-                    gap: 2,
-                  }}
-                >
+                <Box key={rowIndex} sx={{ display: "flex", gap: 2 }}>
                   {rowCols.map((col) => {
                     const isRangeType = col.type === "date" || col.type === "datetime";
                     return (
@@ -483,7 +470,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         )}
       </Box>
 
-      {/* 搜尋區與表格之間的 bar，可拖動調整搜尋區高度 */}
+      {/* 拖动条 */}
       <Box
         onMouseDown={handleMouseDown}
         sx={{
@@ -495,6 +482,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         }}
       />
 
+      {/* 表格 */}
       <TableContainer
         component={Paper}
         sx={{
@@ -544,7 +532,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         </Table>
       </TableContainer>
 
-      {/* 搜尋欄位設定 Dialog */}
+      {/* 設定 Dialog */}
       <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>搜尋欄位設定</DialogTitle>
         <DialogContent dividers>

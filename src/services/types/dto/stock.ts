@@ -1,10 +1,10 @@
 import { ApiResponse } from "./apiResponse";
 
-export interface StockSeatchResponse extends ApiResponse {
-  stockSearchList: StockSearch[];
+export interface StockSnapshotResponse extends ApiResponse {
+  stockSnapshots: StockSnapshot[];
 }
 
-export interface StockSearch {
+export interface StockSnapshot {
   symbol: string;
   quoteDate: string;
   closePrice: number;

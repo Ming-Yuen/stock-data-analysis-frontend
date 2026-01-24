@@ -3,7 +3,7 @@ import React from "react";
 export interface Column {
   id: string;
   label: string;
-  type?: "text" | "number" | "select" | "date" | "datetime";
+  type?: "text" | "number" | "select" | "date" | "datetime" | "checkbox";
   selectOptions?: { label: string; value: string | number }[];
   width?: number | string;
   render?: (value: any, row: any, index: number, extraProps?: any) => React.ReactNode;
@@ -28,4 +28,5 @@ export interface DynamicFormTableProps {
   extraRenderProps?: any;
   pageKey: string;
   toolbarActions?: React.ReactNode;
+  onSearch?: (criteria: Record<string, any>) => void;
 }
