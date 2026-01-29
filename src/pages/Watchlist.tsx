@@ -5,13 +5,15 @@ import { apiConfig } from "../apiConfig";
 import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
 import { MenuTree } from "../services/types/dto/menu";
-import { StockSnapshot, StockSnapshotResponse } from "../services/types/dto/stock";
+import { StockSnapshot } from "../services/types/dto/stock";
 
 const columns: Column[] = [
-  { id: "symbol", label: "Symbol", width: 200 },
+  { id: "watched", type: "checkbox", label: "Watched", width: 140 },
+  { id: "symbol", label: "Symbol", width: 200, uppercase: true },
   { id: "quoteDate", type: "date", label: "Quote Date", width: 200 },
   { id: "closePrice", type: "number", label: "Close Price", width: 200 },
   { id: "stockPe", type: "number", label: "PE", width: 200 },
+  { id: "rsi", type: "number", label: "RSI", width: 200 },
 ];
 
 interface WatchListPageProps {
@@ -24,9 +26,8 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   const [hasMore] = useState(true);
 
   // 用 mutation：只在 Search 时打 API
-  const stockSearch = useMutate<any, any>(apiConfig.getStockSearch, undefined, {
+  const stockSearch = useMutate<any, any>(apiConfig.getWatchList, undefined, {
     onSuccess: (resp) => {
-      console.log(resp.stockSnapshots);
       setAllData(resp.stockSnapshots ?? []);
     },
   });

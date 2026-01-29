@@ -3,13 +3,7 @@ export interface ApiEndpoint {
   url: string;
 }
 
-type ApiKey =
-  | "getMenu"
-  | "getSearchCriteriaConfig"
-  | "getJobList"
-  | "launchJobList"
-  | "getStockSearch"
-  | "updateSearchCriteriaConfig";
+type ApiKey = "getMenu" | "getSearchCriteriaConfig" | "getJobList" | "launchJobList" | "getWatchList" | "updateSearchCriteriaConfig";
 
 // Step 2：编写配置并用 satisfies 验证
 export const apiConfig = {
@@ -33,19 +27,14 @@ export const apiConfig = {
     method: "post",
     url: process.env.REACT_APP_JOB_LAUNCH!,
   },
-  getStockSearch: {
+  getWatchList: {
     method: "post",
-    url: process.env.REACT_APP_STOCK_SEARCH!,
+    url: process.env.REACT_APP_WATCH_LIST!,
   },
 } satisfies Record<ApiKey, ApiEndpoint>;
 
 // Step 3：封装调用函数
-export function callApi<K extends ApiKey>(
-  key: K,
-  payload?: unknown
-): Promise<unknown> {
+export function callApi<K extends ApiKey>(key: K, payload?: unknown): Promise<unknown> {
   const { method, url } = apiConfig[key];
-  return fetch(url, { method, body: JSON.stringify(payload) }).then((res) =>
-    res.json()
-  );
+  return fetch(url, { method, body: JSON.stringify(payload) }).then((res) => res.json());
 }

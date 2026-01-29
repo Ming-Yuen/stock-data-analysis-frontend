@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  TableCell,
-  TextField,
-  Select,
-  MenuItem,
-  Typography,
-} from "@mui/material";
+import { TableCell, TextField, Select, MenuItem, Typography, Checkbox } from "@mui/material";
 import { useDateFormatter } from "./hooks/useDateFormatter";
 import { Column } from "./DynamicFormTable.types";
 
@@ -18,33 +12,18 @@ export interface TableDataCellProps {
   extraRenderProps?: any;
 }
 
-export const TableDataCell: React.FC<TableDataCellProps> = ({
-  column,
-  row,
-  rowIndex,
-  isExternal,
-  onChange,
-  extraRenderProps,
-}) => {
+export const TableDataCell: React.FC<TableDataCellProps> = ({ column, row, rowIndex, isExternal, onChange, extraRenderProps }) => {
   const { formatDate } = useDateFormatter();
 
   if (column.render) {
-    return (
-      <TableCell>
-        {column.render(row[column.id], row, rowIndex, extraRenderProps)}
-      </TableCell>
-    );
+    return <TableCell>{column.render(row[column.id], row, rowIndex, extraRenderProps)}</TableCell>;
   }
 
   const value = row[column.id];
 
   if (isExternal) {
     if (column.type === "date") {
-      const formatted = formatDate(
-        value,
-        column.sourceDateFormat,
-        column.displayDateFormat
-      );
+      const formatted = formatDate(value, column.sourceDateFormat, column.displayDateFormat);
       return (
         <TableCell>
           <Typography variant="body2">{formatted}</Typography>
@@ -52,11 +31,26 @@ export const TableDataCell: React.FC<TableDataCellProps> = ({
       );
     }
 
+    if (column.type === "checkbox") {
+      return (
+        <TableCell>
+          <Checkbox size="small" checked={Boolean(value)} onChange={(e) => onChange?.(rowIndex, column.id, e.target.checked)} />
+        </TableCell>
+      );
+    }
+
     return (
       <TableCell>
-        <Typography variant="body2">
-          {value != null && value !== "" ? value : "-"}
-        </Typography>
+        <Typography variant="body2">{value != null && value !== "" ? value : "-"}</Typography>
+      </TableCell>
+    );
+  }
+
+  // editable
+  if (column.type === "checkbox") {
+    return (
+      <TableCell>
+        <Checkbox size="small" checked={Boolean(value)} onChange={(e) => onChange?.(rowIndex, column.id, e.target.checked)} />
       </TableCell>
     );
   }
@@ -64,12 +58,7 @@ export const TableDataCell: React.FC<TableDataCellProps> = ({
   if (column.type === "select") {
     return (
       <TableCell>
-        <Select
-          fullWidth
-          size="small"
-          value={row[column.id] ?? ""}
-          onChange={(e) => onChange?.(rowIndex, column.id, e.target.value)}
-        >
+        <Select fullWidth size="small" value={row[column.id] ?? ""} onChange={(e) => onChange?.(rowIndex, column.id, e.target.value)}>
           {column.selectOptions?.map((opt) => (
             <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
@@ -82,14 +71,7 @@ export const TableDataCell: React.FC<TableDataCellProps> = ({
 
   return (
     <TableCell>
-      <TextField
-        fullWidth
-        size="small"
-        type={column.type || "text"}
-        value={row[column.id] ?? ""}
-        onChange={(e) => onChange?.(rowIndex, column.id, e.target.value)}
-        variant="outlined"
-      />
+      <TextField fullWidth size="small" type={column.type || "text"} value={row[column.id] ?? ""} onChange={(e) => onChange?.(rowIndex, column.id, e.target.value)} variant="outlined" />
     </TableCell>
   );
 };

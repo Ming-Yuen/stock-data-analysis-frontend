@@ -11,6 +11,7 @@ export interface Column {
   sortable?: boolean;
   sourceDateFormat?: string;
   displayDateFormat?: string;
+  uppercase?: boolean;
 }
 
 export interface DynamicFormTableProps {

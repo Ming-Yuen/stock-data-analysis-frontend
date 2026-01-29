@@ -26,25 +26,14 @@ type DateRangeSearchValue = {
   to?: string;
 };
 
-type SearchValue = TextSearchValue | NumberSearchValue | DateRangeSearchValue;
+// 三态：undefined=All, true/false=过滤
+type BooleanSearchValue = boolean | undefined;
+
+type SearchValue = TextSearchValue | NumberSearchValue | DateRangeSearchValue | BooleanSearchValue;
+
 type SearchValuesState = Record<string, SearchValue>;
 
-const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
-  columns,
-  initialRows = [],
-  onRowsChange,
-  data: externalData,
-  loading = false,
-  error = null,
-  hasMore = false,
-  onLoadMore,
-  maxHeight,
-  enableInfiniteScroll = true,
-  extraRenderProps,
-  pageKey,
-  toolbarActions,
-  onSearch, // 新增：由父组件传入
-}) => {
+const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps, pageKey, toolbarActions, onSearch }) => {
   const [rows, setRows] = useState<Record<string, any>[]>(initialRows);
 
   const [searchValues, setSearchValues] = useState<SearchValuesState>({});
@@ -98,7 +87,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
     const emptyRow: Record<string, any> = {};
     columns.forEach((col) => {
-      emptyRow[col.id] = "";
+      emptyRow[col.id] = col.type === "checkbox" ? false : "";
     });
     setRows((prev) => [...prev, emptyRow]);
   };
@@ -107,7 +96,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
   // 搜尋值更新
   const handleTextSearchChange = (columnId: string, value: string) => {
-    setSearchValues((prev) => ({ ...prev, [columnId]: value }));
+    const col = columns.find((c) => c.id === columnId);
+    const v = col?.uppercase ? value.toUpperCase() : value;
+    console.log(col);
+    setSearchValues((prev) => ({ ...prev, [columnId]: v }));
   };
 
   const handleNumberSearchChange = (columnId: string, value: string) => {
@@ -125,6 +117,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         },
       };
     });
+  };
+
+  const handleBooleanSearchChange = (columnId: string, value: BooleanSearchValue) => {
+    setSearchValues((prev) => ({ ...prev, [columnId]: value }));
   };
 
   const handleClearAllSearch = () => {
@@ -152,7 +148,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     return Array.from(unique).map((v) => ({ label: v, value: v }));
   };
 
-  // 过滤后的表格数据（你原本的前端过滤）
+  // 过滤后的表格数据（前端过滤；externalData 时你也可以选择 skip，本版保持原逻辑）
   const filteredData = useMemo(() => {
     if (!sortedData) return [];
 
@@ -160,6 +156,11 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       if (disabledSearchFields.includes(field)) return false;
       const col = columns.find((c) => c.id === field);
       if (!col) return false;
+
+      if (col.type === "checkbox") {
+        // 三态：只有 true/false 才算 active
+        return typeof value === "boolean";
+      }
 
       if (col.type === "number") {
         const v = value as NumberSearchValue;
@@ -182,6 +183,11 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         if (!col) return true;
 
         const cell = row[field];
+
+        if (col.type === "checkbox") {
+          const expected = value as boolean;
+          return Boolean(cell) === expected;
+        }
 
         if (!col.type || col.type === "text" || col.type === "select") {
           const v = (value as TextSearchValue)?.trim();
@@ -279,11 +285,17 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     };
   }, [isResizing]);
 
-  // ===== 新增：把 searchValues 变成“非空 criteria” =====
+  // ===== 把 searchValues 变成“非空 criteria” =====
   const buildCriteria = useCallback((values: SearchValuesState) => {
     const criteria: Record<string, any> = {};
 
     Object.entries(values).forEach(([field, v]) => {
+      // checkbox: 三态 -> 只有 boolean 才传
+      if (typeof v === "boolean") {
+        criteria[field] = v;
+        return;
+      }
+
       // text / select
       if (typeof v === "string") {
         const s = v.trim();
@@ -316,10 +328,41 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     onSearch?.(criteria);
   };
 
+  const normalizeInput = (col: Column, value: any) => {
+    if (!col.uppercase) return value;
+    if (value == null) return value;
+    return String(value).toUpperCase(); // 可加 trim()
+  };
+
   // Render search field
   const renderSearchField = (col: Column) => {
     if (col.isActionColumn) return null;
     if (disabledSearchFields.includes(col.id)) return null;
+
+    if (col.type === "checkbox") {
+      const val = searchValues[col.id] as BooleanSearchValue;
+      const selectValue = val === undefined ? "" : val ? "true" : "false";
+
+      return (
+        <Select
+          size="small"
+          fullWidth
+          displayEmpty
+          value={selectValue}
+          onChange={(e) => {
+            const v = e.target.value as string;
+            if (v === "") handleBooleanSearchChange(col.id, undefined);
+            else handleBooleanSearchChange(col.id, v === "true");
+          }}
+        >
+          <MenuItem value="">
+            <em>All</em>
+          </MenuItem>
+          <MenuItem value="true">True</MenuItem>
+          <MenuItem value="false">False</MenuItem>
+        </Select>
+      );
+    }
 
     if (col.type === "select") {
       const value = (searchValues[col.id] as TextSearchValue) ?? "";
@@ -340,7 +383,19 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
     if (!col.type || col.type === "text") {
       const value = (searchValues[col.id] as TextSearchValue) ?? "";
-      return <TextField size="small" fullWidth value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value)} />;
+      return (
+        <TextField
+          size="small"
+          fullWidth
+          value={value}
+          onChange={(e) => handleTextSearchChange(col.id, e.target.value)}
+          slotProps={{
+            htmlInput: {
+              style: col.uppercase ? { textTransform: "uppercase" } : undefined,
+            },
+          }}
+        />
+      );
     }
 
     if (col.type === "number") {
@@ -396,7 +451,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
-      {/* 右上角按钮区：Clear / Settings / Search / 外部 toolbarActions */}
+      {/* 右上角按钮区 */}
       <Box
         sx={{
           mb: 1,
