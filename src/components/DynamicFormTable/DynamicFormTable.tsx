@@ -18,7 +18,12 @@ type SearchValue = TextSearchValue | NumberSearchValue | DateRangeSearchValue | 
 type SearchValuesState = Record<string, SearchValue>;
 
 const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps, pageKey, toolbarActions, onSearch }) => {
-  const [rows, setRows] = useState<Record<string, any>[]>(initialRows);
+  // 判斷是否使用外部數據模式
+  const useExternalData = externalData !== undefined;
+
+  // ✅ 核心修改：內部維護一個顯示用的 State，初始化時根據模式決定來源
+  const [displayData, setDisplayData] = useState<Record<string, any>[]>(useExternalData ? externalData : initialRows);
+
   const [searchValues, setSearchValues] = useState<SearchValuesState>({});
   const [disabledSearchFields, setDisabledSearchFields] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -26,8 +31,20 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   const [searchPanelHeight, setSearchPanelHeight] = useState<number>(180);
   const [isResizing, setIsResizing] = useState(false);
 
-  const useExternalData = externalData !== undefined;
-  const currentData = useExternalData ? externalData : rows;
+  // ✅ 核心修改：當外部數據 prop 更新時，同步到內部顯示 state
+  useEffect(() => {
+    if (useExternalData && externalData) {
+      setDisplayData(externalData);
+    }
+  }, [useExternalData, externalData]);
+
+  // ✅ 核心修改：當內部數據模式下的 rows 更新時，通知父層 (保持舊邏輯兼容)
+  useEffect(() => {
+    if (!useExternalData) {
+      onRowsChange?.(displayData);
+    }
+  }, [displayData, onRowsChange, useExternalData]);
+
   const currentLoading = useExternalData ? loading : false;
   const currentError = useExternalData ? error : null;
 
@@ -52,27 +69,34 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
   const updateCriteriaMutation = useMutate<UpdateCriteriaConfigResponse, UpdateCriteriaConfigRequest>(apiConfig.updateSearchCriteriaConfig);
 
-  useEffect(() => {
-    if (!useExternalData) {
-      onRowsChange?.(rows);
-    }
-  }, [rows, onRowsChange, useExternalData]);
-
-  // ===== Cell 改動邏輯 =====
-  const handleCellChange = (rowIndex: number, columnId: string, value: any) => {
+  // ===== Cell 改動邏輯 (已修改：內部自動更新 UI) =====
+  const handleCellChange = async (rowIndex: number, columnId: string, value: any) => {
     const col = columns.find((c) => c.id === columnId);
 
-    // 只有 checkbox 在 externalData 模式下可以改
+    // 權限檢查：External 模式下通常只允許改 checkbox
     if (useExternalData && col?.type !== "checkbox") {
       return;
     }
 
-    const updated = rows.map((r, i) => (i === rowIndex ? { ...r, [columnId]: value } : r));
-    setRows(updated);
+    // ✅ 核心修改：無論是否 External，都先更新本地顯示狀態 (Optimistic Update)
+    const updatedRows = displayData.map((r, i) => (i === rowIndex ? { ...r, [columnId]: value } : r));
+    setDisplayData(updatedRows);
 
-    // checkbox 改了就通知父層
-    if (useExternalData && col?.type === "checkbox") {
-      onRowsChange?.(updated);
+    // 如果是 External 模式，依然通知父層 (父層可選處理)
+    if (useExternalData) {
+      onRowsChange?.(updatedRows);
+    }
+
+    // 觸發 Column 自定義事件 (API Call)
+    if (col?.onChange) {
+      try {
+        await col.onChange(value, updatedRows[rowIndex]);
+      } catch (err) {
+        // 如果 API 失敗，可以在這裡回滾 UI (可選)
+        console.error("Column action failed:", err);
+        // 若需嚴格一致性，這裡可考慮回滾：
+        // setDisplayData(displayData);
+      }
     }
   };
 
@@ -82,10 +106,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     columns.forEach((col) => {
       emptyRow[col.id] = col.type === "checkbox" ? false : "";
     });
-    setRows((prev) => [...prev, emptyRow]);
+    setDisplayData((prev) => [...prev, emptyRow]);
   };
 
-  const sortedData = sortField ? getSortedData(currentData) : currentData;
+  const sortedData = sortField ? getSortedData(displayData) : displayData;
 
   // ===== 搜尋值改動 =====
   const handleTextSearchChange = (columnId: string, value: string) => {
@@ -128,7 +152,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       return col.selectOptions;
     }
     const unique = new Set<string>();
-    currentData.forEach((row) => {
+    displayData.forEach((row) => {
       const v = row[col.id];
       if (v !== null && v !== undefined && v !== "") {
         unique.add(String(v));
@@ -421,6 +445,15 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
     const value = row[col.id];
 
+    // Checkbox 處理 (包含 useExternalData)
+    if (col.type === "checkbox") {
+      return (
+        <TableCell>
+          <Checkbox size="small" checked={Boolean(value)} onChange={(e) => handleCellChange(rowIndex, col.id, e.target.checked)} />
+        </TableCell>
+      );
+    }
+
     if (useExternalData) {
       if (col.type === "date") {
         const formatted = formatDate(value, col.sourceDateFormat, col.displayDateFormat);
@@ -430,31 +463,14 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
           </TableCell>
         );
       }
-
-      if (col.type === "checkbox") {
-        return (
-          <TableCell>
-            <Checkbox size="small" checked={Boolean(value)} onChange={(e) => handleCellChange(rowIndex, col.id, e.target.checked)} />
-          </TableCell>
-        );
-      }
-
       return (
         <TableCell>
-          <Typography variant="body2">{value != null && value !== "" ? value : "-"}</Typography>
+          <Typography variant="body2">{value != null && value !== "" ? value : "N/A"}</Typography>
         </TableCell>
       );
     }
 
-    // Editable
-    if (col.type === "checkbox") {
-      return (
-        <TableCell>
-          <Checkbox size="small" checked={Boolean(value)} onChange={(e) => handleCellChange(rowIndex, col.id, e.target.checked)} />
-        </TableCell>
-      );
-    }
-
+    // Editable (Local Data)
     if (col.type === "select") {
       return (
         <TableCell>
@@ -522,7 +538,14 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
       {/* 右上角按鈕區 */}
-      <Box sx={{ mb: 1, display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+      <Box
+        sx={{
+          mb: 1,
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+        }}
+      >
         <Stack direction="row" spacing={1} alignItems="center">
           <Button variant="outlined" size="small" onClick={handleClearAllSearch}>
             Clear
@@ -546,8 +569,23 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       {/* 搜尋區 */}
       <Box sx={{ mb: 1 }}>
         {!criteriaLoading && (
-          <Box sx={{ flex: 1, height: searchPanelHeight, overflowY: "auto", pr: 1 }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, maxWidth: 900, width: "100%" }}>
+          <Box
+            sx={{
+              flex: 1,
+              height: searchPanelHeight,
+              overflowY: "auto",
+              pr: 1,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+                maxWidth: 900,
+                width: "100%",
+              }}
+            >
               {searchRows.map((rowCols, rowIndex) => (
                 <Box key={rowIndex} sx={{ display: "flex", gap: 2 }}>
                   {rowCols.map((col) => {

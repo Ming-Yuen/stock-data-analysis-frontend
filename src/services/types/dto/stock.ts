@@ -5,8 +5,11 @@ export interface StockSnapshotResponse extends ApiResponse {
 }
 
 export interface StockSnapshot {
+  figi: string;
   symbol: string;
   quoteDate: string;
   closePrice: number;
-  stockPe: number;
+  pe: number;
+  peg: number;
+  rsi: number;
 }

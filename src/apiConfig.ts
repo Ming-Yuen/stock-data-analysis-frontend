@@ -3,7 +3,7 @@ export interface ApiEndpoint {
   url: string;
 }
 
-type ApiKey = "getMenu" | "getSearchCriteriaConfig" | "getJobList" | "launchJobList" | "getWatchList" | "updateSearchCriteriaConfig";
+type ApiKey = "getMenu" | "updateSearchCriteriaConfig" | "getSearchCriteriaConfig" | "getJobList" | "launchJobList" | "getWatchList" | "updateWatchList";
 
 // Step 2：编写配置并用 satisfies 验证
 export const apiConfig = {
@@ -30,6 +30,10 @@ export const apiConfig = {
   getWatchList: {
     method: "post",
     url: process.env.REACT_APP_WATCH_LIST!,
+  },
+  updateWatchList: {
+    method: "post",
+    url: process.env.REACT_APP_UPDATE_WATCH_LIST!,
   },
 } satisfies Record<ApiKey, ApiEndpoint>;
 

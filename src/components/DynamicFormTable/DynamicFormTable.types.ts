@@ -12,6 +12,7 @@ export interface Column {
   sourceDateFormat?: string;
   displayDateFormat?: string;
   uppercase?: boolean;
+  onChange?: (value: any, row: Record<string, any>) => void | Promise<void>;
 }
 
 export interface DynamicFormTableProps {
