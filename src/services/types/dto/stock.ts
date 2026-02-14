@@ -12,4 +12,5 @@ export interface StockSnapshot {
   pe: number;
   peg: number;
   rsi: number;
+  cashPerShare: number;
 }

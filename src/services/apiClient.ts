@@ -2,10 +2,10 @@ import axios, { AxiosInstance } from "axios";
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: process.env.REACT_APP_API_BASE_URL as string,
-  timeout: 10000,
+  timeout: 100000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
 });
 
 // 请求拦截器

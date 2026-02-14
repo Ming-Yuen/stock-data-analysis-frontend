@@ -455,7 +455,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     }
 
     if (useExternalData) {
-      if (col.type === "date") {
+      if (col.type === "date" || col.type === "datetime") {
         const formatted = formatDate(value, col.sourceDateFormat, col.displayDateFormat);
         return (
           <TableCell>

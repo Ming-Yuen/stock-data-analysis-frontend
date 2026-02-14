@@ -50,6 +50,8 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       { id: "closePrice", type: "number", label: "Close Price", width: 200 },
       { id: "pe", type: "number", label: "PE", width: 200 },
       { id: "rsi", type: "number", label: "RSI", width: 200 },
+      { id: "cashPerShare", type: "number", label: "Cash Per Share", width: 200 },
+      // { id: "upside", type: "number", label: "Upside (%)", width: 200 },
     ],
     [updateWatchList]
   );
