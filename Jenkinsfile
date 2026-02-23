@@ -9,7 +9,7 @@ pipeline {
     environment {
         IMAGE_NAME     = "stock-data-analysis-frontend"
         CONTAINER_NAME = "stock-data-analysis-frontend"
-        APP_PORT       = "3000"  // 容器內服務的 port，依你的 Dockerfile 調整
+        APP_PORT       = "80"  // 容器內服務的 port，依你的 Dockerfile 調整
         HOST_PORT      = "3000"  // 宿主機對外 port
     }
 
