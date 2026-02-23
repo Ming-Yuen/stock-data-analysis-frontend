@@ -1,11 +1,16 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:20'   // 有 node + npm 的官方鏡像
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
         IMAGE_NAME     = "stock-data-analysis-frontend"
         CONTAINER_NAME = "stock-data-analysis-frontend"
-        HOST_PORT      = "3000"  // 對外訪問用埠
-        APP_PORT       = "80"    // 容器內 Nginx 埠
+        APP_PORT       = "3000"  // 容器內服務的 port，依你的 Dockerfile 調整
+        HOST_PORT      = "3000"  // 宿主機對外 port
     }
 
     stages {
@@ -17,14 +22,17 @@ pipeline {
 
         stage('Install & Build') {
             steps {
-                sh 'npm ci'
-                sh 'npm run build'
+                sh '''
+                  cd "$WORKSPACE"
+                  npm ci
+                  npm run build
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:latest ."
+                sh 'cd "$WORKSPACE" && docker build -t ${IMAGE_NAME}:latest .'
             }
         }
 
