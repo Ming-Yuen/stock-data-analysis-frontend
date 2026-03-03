@@ -6,6 +6,7 @@ import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
 import { MenuTree } from "../services/types/dto/menu";
 import { WatchItem, WatchlistEnquiryResponse } from "../services/types/dto/watchlist";
+import { useTranslation } from "react-i18next";
 
 interface WatchListPageProps {
   menuTree: MenuTree;
@@ -15,6 +16,8 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   const [pageSize] = useState(10);
   const [allData, setAllData] = useState<WatchItem[]>([]);
   const [hasMore] = useState(true);
+
+  const { t, i18n } = useTranslation();
 
   // ✅ 1. 新增 Ref 用於防止 useEffect 重複執行
   const initializedRef = useRef(false);
@@ -33,7 +36,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       {
         id: "watched",
         type: "checkbox",
-        label: "Watched",
+        label: t("Watched"),
         width: 140,
         // ✅ 在這裡定義點擊事件
         onChange: (value, row) => {
@@ -45,12 +48,14 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
           });
         },
       },
-      { id: "symbol", label: "Symbol", width: 200, uppercase: true },
-      { id: "quoteDate", type: "date", label: "Quote Date", width: 200, displayDateFormat: "yyyy-MM-dd" },
-      { id: "closePrice", type: "number", label: "Close Price", width: 200 },
-      { id: "pe", type: "number", label: "PE", width: 200 },
-      { id: "rsi", type: "number", label: "RSI", width: 200 },
-      { id: "cashPerShare", type: "number", label: "Cash Per Share", width: 200 },
+      { id: "symbol",       type:"text",    label: t("symbol"),         width: 200,   uppercase: true },
+      { id: "industry",     type:"select",  label: t("industry"),       width: 200 ,  translateValue:true},
+      { id: "subCategory",  type:"select",  label: t("SubCategory"),    width: 200,   translateValue: true},
+      { id: "quoteDate",    type: "date",   label: t("Quote Date"),     width: 200,   displayDateFormat: "yyyy-MM-dd" },
+      { id: "closePrice",   type: "number", label: t("Close Price"),    width: 200 },
+      { id: "pe",           type: "number", label: t("PE"),             width: 200 },
+      { id: "rsi",          type: "number", label: t("RSI"),            width: 200 },
+      { id: "cashPerShare", type: "number", label: t("Cash Per Share"), width: 200 },
       // { id: "upside", type: "number", label: "Upside (%)", width: 200 },
     ],
     [updateWatchList]

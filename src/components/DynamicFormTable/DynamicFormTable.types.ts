@@ -4,6 +4,7 @@ export interface Column {
   id: string;
   label: string;
   type?: "text" | "number" | "select" | "date" | "datetime" | "checkbox";
+  translateValue?: boolean;
   selectOptions?: { label: string; value: string | number }[];
   width?: number | string;
   render?: (value: any, row: any, index: number, extraProps?: any) => React.ReactNode;

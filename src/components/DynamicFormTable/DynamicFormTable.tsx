@@ -9,6 +9,7 @@ import { useFetch, useMutate } from "../../hooks/api/useApi";
 import { apiConfig } from "../../apiConfig";
 import type { DynamicFormTableProps, Column } from "./DynamicFormTable.types";
 import type { SearchCriteriaConfigResponse, UpdateCriteriaConfigRequest, UpdateCriteriaConfigResponse } from "../../services/types/dto/searchCriteria";
+import { useTranslation } from "react-i18next";
 
 type BooleanSearchValue = boolean | undefined;
 type TextSearchValue = string;
@@ -17,7 +18,8 @@ type DateRangeSearchValue = { from?: string; to?: string };
 type SearchValue = TextSearchValue | NumberSearchValue | DateRangeSearchValue | BooleanSearchValue;
 type SearchValuesState = Record<string, SearchValue>;
 
-const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps, pageKey, toolbarActions, onSearch }) => {
+const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps, pageKey, title, toolbarActions, onSearch }) => {
+  const { t } = useTranslation();
   // 判斷是否使用外部數據模式
   const useExternalData = externalData !== undefined;
 
@@ -346,7 +348,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
           }}
         >
           <MenuItem value="">
-            <em>All</em>
+            <em>{t("All")}</em>
           </MenuItem>
           <MenuItem value="true">True</MenuItem>
           <MenuItem value="false">False</MenuItem>
@@ -360,13 +362,15 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       return (
         <Select size="small" fullWidth displayEmpty value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value as string)}>
           <MenuItem value="">
-            <em>All</em>
+            <em>{t("All")}</em>
           </MenuItem>
-          {options.map((opt) => (
-            <MenuItem key={opt.value} value={String(opt.value)}>
-              {opt.label}
-            </MenuItem>
-          ))}
+          {options.map((opt) => {
+            return (
+              <MenuItem key={opt.value} value={String(opt.value)}>
+                {getDisplayValue(col, opt.value)}
+              </MenuItem>
+            );
+          })}
         </Select>
       );
     }
@@ -465,7 +469,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       }
       return (
         <TableCell>
-          <Typography variant="body2">{value != null && value !== "" ? value : "N/A"}</Typography>
+          <Typography variant="body2">{value != null && value !== "" ? getDisplayValue(col, value) : "N/A"}</Typography>
         </TableCell>
       );
     }
@@ -475,11 +479,20 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       return (
         <TableCell>
           <Select fullWidth size="small" value={row[col.id] ?? ""} onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)}>
-            {col.selectOptions?.map((opt) => (
+            {/* {col.selectOptions?.map((opt) => (
               <MenuItem key={opt.value} value={opt.value}>
                 {opt.label}
               </MenuItem>
-            ))}
+            ))} */}
+            {col.selectOptions?.map((opt) => {
+            const raw = opt.label ?? opt.value;
+            const text = col.translateValue ? t(`${String(raw)}`) : String(raw);
+            return (
+              <MenuItem key={opt.value} value={String(opt.value)}>
+                {text}
+              </MenuItem>
+            );
+          })}
           </Select>
         </TableCell>
       );
@@ -533,6 +546,16 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         </Box>
       </TableCell>
     );
+  };
+
+  const getDisplayValue = (col: Column, raw: any): string => {
+    if (raw == null || raw === "") return "";
+  
+    if (col.translateValue) {
+      return t(`${String(raw)}`);
+    }
+  
+    return String(raw);
   };
 
   return (

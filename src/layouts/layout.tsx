@@ -1,9 +1,11 @@
-// src/components/Layout.tsx
 import React, { useState, useEffect } from "react";
 import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Box, Icon, Tabs, Tab, Paper } from "@mui/material";
 import { ExpandLess, ExpandMore, FolderOpen, Folder, Description, Close } from "@mui/icons-material";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { MenuTree } from "../services/types/dto/menu";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import "../i18n";
 
 const DRAWER_WIDTH = 240;
 
@@ -37,6 +39,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
   const [activeTab, setActiveTab] = useState<string>(getStoredActiveTab);
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     sessionStorage.setItem("layout-tabs", JSON.stringify(tabs));
@@ -50,17 +53,14 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
     }
   }, [activeTab]);
 
-  // ✅ 當 tabs 為空時，清除 activeTab
   useEffect(() => {
     if (tabs.length === 0) {
       setActiveTab("");
     }
   }, [tabs]);
 
-  // ✅ 檢查 activeTab 是否存在於 tabs 中（不檢查路由）
   useEffect(() => {
     if (activeTab && tabs.length > 0 && !tabs.find((tab) => tab.id === activeTab)) {
-      // activeTab 不在 tabs 列表中，選擇第一個 tab
       setActiveTab(tabs[0].id);
     }
   }, [tabs, activeTab]);
@@ -130,7 +130,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
           <ListItem disablePadding sx={{ pl: 2 + level * 2 }}>
             <ListItemButton onClick={() => (hasChildren ? handleToggle(item.menuId) : handleMenuClick(item))}>
               <ListItemIcon>{item.icon ? <Icon>{item.icon}</Icon> : hasChildren ? isOpen ? <FolderOpen /> : <Folder /> : <Description />}</ListItemIcon>
-              <ListItemText primary={item.name} />
+              <ListItemText primary={item.name}/>
               {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
             </ListItemButton>
           </ListItem>
@@ -145,11 +145,47 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>
-      <Drawer variant="permanent" anchor="left" sx={{ width: DRAWER_WIDTH, flexShrink: 0, "& .MuiDrawer-paper": { width: DRAWER_WIDTH, boxSizing: "border-box", height: "100%" } }}>
+      <Drawer
+        variant="permanent"
+        anchor="left"
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: DRAWER_WIDTH,
+            boxSizing: "border-box",
+            height: "100%",
+          },
+        }}
+      >
         <List sx={{ flexGrow: 1, overflow: "auto" }}>{renderMenu(menuData)}</List>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+        }}
+      >
+        {/* 頂部語言切換列 */}
+        <Box
+          sx={{
+            height: 40,
+            px: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            borderBottom: 1,
+            borderColor: "divider",
+            flexShrink: 0,
+          }}
+        >
+          <LanguageSwitcher />
+        </Box>
+
         {tabs.length > 0 && activeTab && (
           <Paper elevation={1} sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
             <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
@@ -180,11 +216,25 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
           </Paper>
         )}
 
-        <Box sx={{ flexGrow: 1, overflow: "auto", p: tabs.length > 0 ? 0.5 : 0 }}>
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflow: "auto",
+            p: tabs.length > 0 ? 0.5 : 0,
+          }}
+        >
           {tabs.length === 0 && location.pathname === "/" && (
-            <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-              <h1>歡迎使用系統</h1>
-              <p>請從左側菜單選擇功能</p>
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "column",
+              }}
+            >
+              <h1>{t("welcomeTitle")}</h1>
+              <p>{t("welcomeDesc")}</p>
             </Box>
           )}
           <Outlet />
