@@ -1,5 +1,29 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { TableContainer, Table, TableHead, TableBody, TableRow, Paper, Box, Alert, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, FormGroup, FormControlLabel, Checkbox, Typography, MenuItem, Select, Stack, TableCell } from "@mui/material";
+import {
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  Paper,
+  Box,
+  Alert,
+  TextField,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Typography,
+  MenuItem,
+  Select,
+  Stack,
+  TableCell,
+} from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Search, Add, ArrowUpward, ArrowDownward } from "@mui/icons-material";
 import { useInfiniteScroll } from "./hooks/useInfiniteScroll";
@@ -8,23 +32,48 @@ import { useDateFormatter } from "./hooks/useDateFormatter";
 import { useFetch, useMutate } from "../../hooks/api/useApi";
 import { apiConfig } from "../../apiConfig";
 import type { DynamicFormTableProps, Column } from "./DynamicFormTable.types";
-import type { SearchCriteriaConfigResponse, UpdateCriteriaConfigRequest, UpdateCriteriaConfigResponse } from "../../services/types/dto/searchCriteria";
+import type {
+  SearchCriteriaConfigResponse,
+  UpdateCriteriaConfigRequest,
+  UpdateCriteriaConfigResponse,
+} from "../../services/types/dto/searchCriteria";
 import { useTranslation } from "react-i18next";
 
 type BooleanSearchValue = boolean | undefined;
 type TextSearchValue = string;
 type NumberSearchValue = { value: string };
 type DateRangeSearchValue = { from?: string; to?: string };
-type SearchValue = TextSearchValue | NumberSearchValue | DateRangeSearchValue | BooleanSearchValue;
+type SearchValue =
+  | TextSearchValue
+  | NumberSearchValue
+  | DateRangeSearchValue
+  | BooleanSearchValue;
 type SearchValuesState = Record<string, SearchValue>;
 
-const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRows = [], onRowsChange, data: externalData, loading = false, error = null, hasMore = false, onLoadMore, maxHeight, enableInfiniteScroll = true, extraRenderProps, pageKey, title, toolbarActions, onSearch }) => {
+const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
+  columns,
+  initialRows = [],
+  onRowsChange,
+  data: externalData,
+  loading = false,
+  error = null,
+  hasMore = false,
+  onLoadMore,
+  maxHeight,
+  enableInfiniteScroll = true,
+  extraRenderProps,
+  pageKey,
+  title,
+  toolbarActions,
+  onSearch,
+  onSearchFieldChange,
+}) => {
   const { t } = useTranslation();
-  // 判斷是否使用外部數據模式
   const useExternalData = externalData !== undefined;
 
-  // ✅ 核心修改：內部維護一個顯示用的 State，初始化時根據模式決定來源
-  const [displayData, setDisplayData] = useState<Record<string, any>[]>(useExternalData ? externalData : initialRows);
+  const [displayData, setDisplayData] = useState<Record<string, any>[]>(
+    useExternalData ? externalData : initialRows
+  );
 
   const [searchValues, setSearchValues] = useState<SearchValuesState>({});
   const [disabledSearchFields, setDisabledSearchFields] = useState<string[]>([]);
@@ -33,14 +82,12 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   const [searchPanelHeight, setSearchPanelHeight] = useState<number>(180);
   const [isResizing, setIsResizing] = useState(false);
 
-  // ✅ 核心修改：當外部數據 prop 更新時，同步到內部顯示 state
   useEffect(() => {
     if (useExternalData && externalData) {
       setDisplayData(externalData);
     }
   }, [useExternalData, externalData]);
 
-  // ✅ 核心修改：當內部數據模式下的 rows 更新時，通知父層 (保持舊邏輯兼容)
   useEffect(() => {
     if (!useExternalData) {
       onRowsChange?.(displayData);
@@ -58,10 +105,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   });
   const { formatDate } = useDateFormatter();
 
-  // 讀取搜尋欄位設定
-  const { data: criteriaConfig, isLoading: criteriaLoading } = useFetch<SearchCriteriaConfigResponse>(apiConfig.getSearchCriteriaConfig, {
-    pageKey: pageKey,
-  });
+  const { data: criteriaConfig, isLoading: criteriaLoading } =
+    useFetch<SearchCriteriaConfigResponse>(apiConfig.getSearchCriteriaConfig, {
+      pageKey: pageKey,
+    });
 
   useEffect(() => {
     if (criteriaConfig?.disabledFields) {
@@ -69,35 +116,36 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     }
   }, [criteriaConfig]);
 
-  const updateCriteriaMutation = useMutate<UpdateCriteriaConfigResponse, UpdateCriteriaConfigRequest>(apiConfig.updateSearchCriteriaConfig);
+  const updateCriteriaMutation = useMutate<
+    UpdateCriteriaConfigResponse,
+    UpdateCriteriaConfigRequest
+  >(apiConfig.updateSearchCriteriaConfig);
 
-  // ===== Cell 改動邏輯 (已修改：內部自動更新 UI) =====
-  const handleCellChange = async (rowIndex: number, columnId: string, value: any) => {
+  const handleCellChange = async (
+    rowIndex: number,
+    columnId: string,
+    value: any
+  ) => {
     const col = columns.find((c) => c.id === columnId);
 
-    // 權限檢查：External 模式下通常只允許改 checkbox
     if (useExternalData && col?.type !== "checkbox") {
       return;
     }
 
-    // ✅ 核心修改：無論是否 External，都先更新本地顯示狀態 (Optimistic Update)
-    const updatedRows = displayData.map((r, i) => (i === rowIndex ? { ...r, [columnId]: value } : r));
+    const updatedRows = displayData.map((r, i) =>
+      i === rowIndex ? { ...r, [columnId]: value } : r
+    );
     setDisplayData(updatedRows);
 
-    // 如果是 External 模式，依然通知父層 (父層可選處理)
     if (useExternalData) {
       onRowsChange?.(updatedRows);
     }
 
-    // 觸發 Column 自定義事件 (API Call)
     if (col?.onChange) {
       try {
         await col.onChange(value, updatedRows[rowIndex]);
       } catch (err) {
-        // 如果 API 失敗，可以在這裡回滾 UI (可選)
         console.error("Column action failed:", err);
-        // 若需嚴格一致性，這裡可考慮回滾：
-        // setDisplayData(displayData);
       }
     }
   };
@@ -113,67 +161,95 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
   const sortedData = sortField ? getSortedData(displayData) : displayData;
 
-  // ===== 搜尋值改動 =====
   const handleTextSearchChange = (columnId: string, value: string) => {
     const col = columns.find((c) => c.id === columnId);
     const v = col?.uppercase ? value.toUpperCase() : value;
-    setSearchValues((prev) => ({ ...prev, [columnId]: v }));
-  };
 
-  const handleNumberSearchChange = (columnId: string, value: string) => {
-    setSearchValues((prev) => ({ ...prev, [columnId]: { value } }));
-  };
-
-  const handleDateRangeChange = (columnId: string, key: "from" | "to", value: string) => {
     setSearchValues((prev) => {
-      const prevVal = prev[columnId] as DateRangeSearchValue | undefined;
-      return {
-        ...prev,
-        [columnId]: { ...(prevVal || {}), [key]: value || undefined },
-      };
+      const next: SearchValuesState = { ...prev };
+
+      if (columnId === "industry") {
+        next["category"] = "";
+        next["subCategory"] = "";
+      } else if (columnId === "category") {
+        next["subCategory"] = "";
+      }
+
+      next[columnId] = v;
+      onSearchFieldChange?.(columnId, v, next as Record<string, any>);
+      return next;
     });
   };
 
-  const handleBooleanSearchChange = (columnId: string, value: BooleanSearchValue) => {
-    setSearchValues((prev) => ({ ...prev, [columnId]: value }));
+  const handleNumberSearchChange = (columnId: string, value: string) => {
+    setSearchValues((prev) => {
+      const next: SearchValuesState = { ...prev, [columnId]: { value } };
+      onSearchFieldChange?.(columnId, { value }, next as Record<string, any>);
+      return next;
+    });
+  };
+
+  const handleDateRangeChange = (
+    columnId: string,
+    key: "from" | "to",
+    value: string
+  ) => {
+    setSearchValues((prev) => {
+      const prevVal = prev[columnId] as DateRangeSearchValue | undefined;
+      const nextVal: DateRangeSearchValue = {
+        ...(prevVal || {}),
+        [key]: value || undefined,
+      };
+      const next: SearchValuesState = { ...prev, [columnId]: nextVal };
+      onSearchFieldChange?.(columnId, nextVal, next as Record<string, any>);
+      return next;
+    });
+  };
+
+  const handleBooleanSearchChange = (
+    columnId: string,
+    value: BooleanSearchValue
+  ) => {
+    setSearchValues((prev) => {
+      const next: SearchValuesState = { ...prev, [columnId]: value };
+      onSearchFieldChange?.(columnId, value, next as Record<string, any>);
+      return next;
+    });
   };
 
   const handleClearAllSearch = () => {
     setSearchValues({});
+    onSearchFieldChange?.("", "", {});
   };
 
-  const parseDateValue = (val: any, col: Column): Date | null => {
+  const parseDateValue = (val: any): Date | null => {
     if (val == null) return null;
     if (val instanceof Date) return val;
     const d = new Date(val);
     return isNaN(d.getTime()) ? null : d;
   };
 
-  // ===== 過濾 =====
   const filteredData = useMemo(() => {
     if (!sortedData) return [];
 
-    const activeFiltersEntries = Object.entries(searchValues).filter(([field, value]) => {
-      if (disabledSearchFields.includes(field)) return false;
-      const col = columns.find((c) => c.id === field);
-      if (!col) return false;
+    const activeFiltersEntries = Object.entries(searchValues).filter(
+      ([field, value]) => {
+        if (disabledSearchFields.includes(field)) return false;
+        const col = columns.find((c) => c.id === field);
+        if (!col) return false;
 
-      if (col.type === "checkbox") {
-        return typeof value === "boolean";
+        if (col.type === "checkbox") return typeof value === "boolean";
+        if (col.type === "number") {
+          const v = value as NumberSearchValue;
+          return v?.value !== undefined && v.value !== "";
+        }
+        if (col.type === "date" || col.type === "datetime") {
+          const v = value as DateRangeSearchValue;
+          return !!v?.from || !!v?.to;
+        }
+        return typeof value === "string" && value.trim() !== "";
       }
-
-      if (col.type === "number") {
-        const v = value as NumberSearchValue;
-        return v?.value !== undefined && v.value !== "";
-      }
-
-      if (col.type === "date" || col.type === "datetime") {
-        const v = value as DateRangeSearchValue;
-        return !!v?.from || !!v?.to;
-      }
-
-      return typeof value === "string" && value.trim() !== "";
-    });
+    );
 
     if (activeFiltersEntries.length === 0) return sortedData;
 
@@ -184,8 +260,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         const cell = row[field];
 
         if (col.type === "checkbox") {
-          const expected = value as boolean;
-          return Boolean(cell) === expected;
+          return Boolean(cell) === (value as boolean);
         }
 
         if (!col.type || col.type === "text" || col.type === "select") {
@@ -211,7 +286,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
           const from = v?.from ? new Date(v.from) : undefined;
           const to = v?.to ? new Date(v.to) : undefined;
           if (!from && !to) return true;
-          const cellDate = parseDateValue(cell, col);
+          const cellDate = parseDateValue(cell);
           if (!cellDate) return false;
           const time = cellDate.getTime();
           if (from && time < from.getTime()) return false;
@@ -224,7 +299,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     );
   }, [sortedData, searchValues, disabledSearchFields, columns]);
 
-  // ===== Settings Dialog =====
   useEffect(() => {
     if (settingsOpen) {
       setLocalDisabledFields(disabledSearchFields);
@@ -232,7 +306,11 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
   }, [settingsOpen, disabledSearchFields]);
 
   const handleToggleField = (fieldId: string) => {
-    setLocalDisabledFields((prev) => (prev.includes(fieldId) ? prev.filter((f) => f !== fieldId) : [...prev, fieldId]));
+    setLocalDisabledFields((prev) =>
+      prev.includes(fieldId)
+        ? prev.filter((f) => f !== fieldId)
+        : [...prev, fieldId]
+    );
   };
 
   const handleSaveSettings = () => {
@@ -246,7 +324,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     setSettingsOpen(false);
   };
 
-  // ===== Resize =====
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsResizing(true);
@@ -279,7 +356,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     };
   }, [isResizing]);
 
-  // ===== Build Criteria =====
   const buildCriteria = useCallback((values: SearchValuesState) => {
     const criteria: Record<string, any> = {};
     Object.entries(values).forEach(([field, v]) => {
@@ -302,7 +378,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         const from = dr.from || undefined;
         const to = dr.to || undefined;
         if (from || to) criteria[field] = { from, to };
-        return;
       }
     });
     return criteria;
@@ -313,7 +388,12 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     onSearch?.(criteria);
   };
 
-  // ===== Render Search Field =====
+  const getDisplayValue = (col: Column, raw: any): string => {
+    if (raw == null || raw === "") return "";
+    if (col.translateValue) return t(`${String(raw)}`);
+    return String(raw);
+  };
+
   const renderSearchField = (col: Column) => {
     if (col.isActionColumn) return null;
     if (disabledSearchFields.includes(col.id)) return null;
@@ -346,17 +426,21 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       const value = (searchValues[col.id] as TextSearchValue) ?? "";
       const options = col.selectOptions ?? [];
       return (
-        <Select size="small" fullWidth displayEmpty value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value as string)}>
+        <Select
+          size="small"
+          fullWidth
+          displayEmpty
+          value={value}
+          onChange={(e) => handleTextSearchChange(col.id, e.target.value as string)}
+        >
           <MenuItem value="">
             <em>{t("All")}</em>
           </MenuItem>
-          {options.map((opt) => {
-            return (
-              <MenuItem key={opt.value} value={String(opt.value)}>
-                {getDisplayValue(col, opt.value)}
-              </MenuItem>
-            );
-          })}
+          {options.map((opt) => (
+            <MenuItem key={opt.value} value={String(opt.value)}>
+              {getDisplayValue(col, opt.value)}
+            </MenuItem>
+          ))}
         </Select>
       );
     }
@@ -380,7 +464,16 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
     if (col.type === "number") {
       const vObj = (searchValues[col.id] as NumberSearchValue) || { value: "" };
-      return <TextField size="small" fullWidth type="number" value={vObj.value} onChange={(e) => handleNumberSearchChange(col.id, e.target.value)} inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }} />;
+      return (
+        <TextField
+          size="small"
+          fullWidth
+          type="number"
+          value={vObj.value}
+          onChange={(e) => handleNumberSearchChange(col.id, e.target.value)}
+          inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+        />
+      );
     }
 
     if (col.type === "date" || col.type === "datetime") {
@@ -388,17 +481,39 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       const isDateOnly = col.type === "date";
       return (
         <Box sx={{ display: "flex", gap: 1 }}>
-          <TextField size="small" fullWidth label="From" type={isDateOnly ? "date" : "datetime-local"} value={v.from ?? ""} onChange={(e) => handleDateRangeChange(col.id, "from", e.target.value)} InputLabelProps={{ shrink: true }} />
-          <TextField size="small" fullWidth label="To" type={isDateOnly ? "date" : "datetime-local"} value={v.to ?? ""} onChange={(e) => handleDateRangeChange(col.id, "to", e.target.value)} InputLabelProps={{ shrink: true }} />
+          <TextField
+            size="small"
+            fullWidth
+            label="From"
+            type={isDateOnly ? "date" : "datetime-local"}
+            value={v.from ?? ""}
+            onChange={(e) => handleDateRangeChange(col.id, "from", e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            label="To"
+            type={isDateOnly ? "date" : "datetime-local"}
+            value={v.to ?? ""}
+            onChange={(e) => handleDateRangeChange(col.id, "to", e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
         </Box>
       );
     }
 
     const value = (searchValues[col.id] as TextSearchValue) ?? "";
-    return <TextField size="small" fullWidth value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value)} />;
+    return (
+      <TextField
+        size="small"
+        fullWidth
+        value={value}
+        onChange={(e) => handleTextSearchChange(col.id, e.target.value)}
+      />
+    );
   };
 
-  // ===== Build Search Rows =====
   const buildSearchRows = (visibleColumns: Column[]): Column[][] => {
     const rows: Column[][] = [];
     let currentRow: Column[] = [];
@@ -424,10 +539,11 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     return rows;
   };
 
-  const visibleSearchColumns = columns.filter((col) => !col.isActionColumn && !disabledSearchFields.includes(col.id));
+  const visibleSearchColumns = columns.filter(
+    (col) => !col.isActionColumn && !disabledSearchFields.includes(col.id)
+  );
   const searchRows = buildSearchRows(visibleSearchColumns);
 
-  // ===== Render Table Cell =====
   const renderCell = (col: Column, row: Record<string, any>, rowIndex: number) => {
     if (col.render) {
       return <TableCell>{col.render(row[col.id], row, rowIndex, extraRenderProps)}</TableCell>;
@@ -435,11 +551,14 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
     const value = row[col.id];
 
-    // Checkbox 處理 (包含 useExternalData)
     if (col.type === "checkbox") {
       return (
         <TableCell>
-          <Checkbox size="small" checked={Boolean(value)} onChange={(e) => handleCellChange(rowIndex, col.id, e.target.checked)} />
+          <Checkbox
+            size="small"
+            checked={Boolean(value)}
+            onChange={(e) => handleCellChange(rowIndex, col.id, e.target.checked)}
+          />
         </TableCell>
       );
     }
@@ -455,30 +574,31 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
       }
       return (
         <TableCell>
-          <Typography variant="body2">{value != null && value !== "" ? getDisplayValue(col, value) : "N/A"}</Typography>
+          <Typography variant="body2">
+            {value != null && value !== "" ? getDisplayValue(col, value) : "N/A"}
+          </Typography>
         </TableCell>
       );
     }
 
-    // Editable (Local Data)
     if (col.type === "select") {
       return (
         <TableCell>
-          <Select fullWidth size="small" value={row[col.id] ?? ""} onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)}>
-            {/* {col.selectOptions?.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))} */}
+          <Select
+            fullWidth
+            size="small"
+            value={row[col.id] ?? ""}
+            onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)}
+          >
             {col.selectOptions?.map((opt) => {
-            const raw = opt.label ?? opt.value;
-            const text = col.translateValue ? t(`${String(raw)}`) : String(raw);
-            return (
-              <MenuItem key={opt.value} value={String(opt.value)}>
-                {text}
-              </MenuItem>
-            );
-          })}
+              const raw = opt.label ?? opt.value;
+              const text = col.translateValue ? t(`${String(raw)}`) : String(raw);
+              return (
+                <MenuItem key={opt.value} value={String(opt.value)}>
+                  {text}
+                </MenuItem>
+              );
+            })}
           </Select>
         </TableCell>
       );
@@ -486,12 +606,18 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
     return (
       <TableCell>
-        <TextField fullWidth size="small" type={col.type || "text"} value={row[col.id] ?? ""} onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)} variant="outlined" />
+        <TextField
+          fullWidth
+          size="small"
+          type={col.type || "text"}
+          value={row[col.id] ?? ""}
+          onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)}
+          variant="outlined"
+        />
       </TableCell>
     );
   };
 
-  // ===== Render Header Cell =====
   const renderHeaderCell = (col: Column) => {
     const isSortable = !col.isActionColumn && col.sortable !== false;
     return (
@@ -506,7 +632,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
           userSelect: "none",
           "&:hover": isSortable ? { backgroundColor: "primary.dark" } : {},
         }}
-        onClick={() => isSortable && handleSort(col.id, !col.isActionColumn && col.sortable !== false)}
+        onClick={() =>
+          isSortable &&
+          handleSort(col.id, !col.isActionColumn && col.sortable !== false)
+        }
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Typography variant="body2" component="span">
@@ -534,19 +663,8 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     );
   };
 
-  const getDisplayValue = (col: Column, raw: any): string => {
-    if (raw == null || raw === "") return "";
-  
-    if (col.translateValue) {
-      return t(`${String(raw)}`);
-    }
-  
-    return String(raw);
-  };
-
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
-      {/* 右上角按鈕區 */}
       <Box
         sx={{
           mb: 1,
@@ -575,7 +693,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         </Alert>
       )}
 
-      {/* 搜尋區 */}
       <Box sx={{ mb: 1 }}>
         {!criteriaLoading && (
           <Box
@@ -624,7 +741,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         )}
       </Box>
 
-      {/* 拖動條 */}
       <Box
         onMouseDown={handleMouseDown}
         sx={{
@@ -636,7 +752,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         }}
       />
 
-      {/* 表格 */}
       <TableContainer
         component={Paper}
         sx={{
@@ -670,14 +785,19 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
           <TableBody>
             {filteredData.map((row, rowIndex) => (
-              <TableRow key={rowIndex} ref={rowIndex === filteredData.length - 1 ? lastElementRef : null} sx={{ "&:hover": { backgroundColor: "#f5f5f5" } }}>
+              <TableRow
+                key={rowIndex}
+                ref={rowIndex === filteredData.length - 1 ? lastElementRef : null}
+                sx={{ "&:hover": { backgroundColor: "#f5f5f5" } }}
+              >
                 {columns.map((col) => (
-                  <React.Fragment key={col.id}>{renderCell(col, row, rowIndex)}</React.Fragment>
+                  <React.Fragment key={col.id}>
+                    {renderCell(col, row, rowIndex)}
+                  </React.Fragment>
                 ))}
               </TableRow>
             ))}
 
-            {/* Footer */}
             {enableInfiniteScroll && hasMore && (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
@@ -689,7 +809,12 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
             {!useExternalData && (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
-                  <Button startIcon={<Add />} onClick={handleAddRow} variant="outlined" size="small">
+                  <Button
+                    startIcon={<Add />}
+                    onClick={handleAddRow}
+                    variant="outlined"
+                    size="small"
+                  >
                     新增列
                   </Button>
                 </TableCell>
@@ -699,7 +824,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
         </Table>
       </TableContainer>
 
-      {/* 設定 Dialog */}
       <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>搜尋欄位設定</DialogTitle>
         <DialogContent dividers>
@@ -710,13 +834,26 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
             {columns
               .filter((col) => !col.isActionColumn)
               .map((col) => (
-                <FormControlLabel key={col.id} control={<Checkbox checked={localDisabledFields.includes(col.id)} onChange={() => handleToggleField(col.id)} />} label={col.label ?? col.id} />
+                <FormControlLabel
+                  key={col.id}
+                  control={
+                    <Checkbox
+                      checked={localDisabledFields.includes(col.id)}
+                      onChange={() => handleToggleField(col.id)}
+                    />
+                  }
+                  label={col.label ?? col.id}
+                />
               ))}
           </FormGroup>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSettingsOpen(false)}>取消</Button>
-          <Button onClick={handleSaveSettings} variant="contained" disabled={updateCriteriaMutation.isPending}>
+          <Button
+            onClick={handleSaveSettings}
+            variant="contained"
+            disabled={updateCriteriaMutation.isPending}
+          >
             儲存
           </Button>
         </DialogActions>

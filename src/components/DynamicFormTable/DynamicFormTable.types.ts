@@ -7,7 +7,12 @@ export interface Column {
   translateValue?: boolean;
   selectOptions?: { label: string; value: string | number }[];
   width?: number | string;
-  render?: (value: any, row: any, index: number, extraProps?: any) => React.ReactNode;
+  render?: (
+    value: any,
+    row: any,
+    index: number,
+    extraProps?: any
+  ) => React.ReactNode;
   isActionColumn?: boolean;
   sortable?: boolean;
   sourceDateFormat?: string;
@@ -32,4 +37,11 @@ export interface DynamicFormTableProps {
   pageKey: string;
   toolbarActions?: React.ReactNode;
   onSearch?: (criteria: Record<string, any>) => void;
+
+  // 搜尋欄位變更時通知父層（做分類聯動）
+  onSearchFieldChange?: (
+    fieldId: string,
+    value: any,
+    allSearchValues: Record<string, any>
+  ) => void;
 }
