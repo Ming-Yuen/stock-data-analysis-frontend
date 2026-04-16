@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Box } from "@mui/material";
-import { useMutate } from "../hooks/api/useApi";
+import { useFetch, useMutate } from "../hooks/api/useApi";
 import { apiConfig } from "../apiConfig";
 import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
 import { MenuTree } from "../services/types/dto/menu";
 import { WatchItem, WatchlistEnquiryResponse } from "../services/types/dto/watchlist";
 import { useTranslation } from "react-i18next";
+import { StockClassificationResponse } from "../services/types/dto/stock";
 
 interface WatchListPageProps {
   menuTree: MenuTree;
@@ -31,17 +32,46 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
 
   const updateWatchList = useMutate<WatchlistEnquiryResponse, any>(apiConfig.updateWatchList);
 
+  const { data: classificationResp } = useFetch<StockClassificationResponse>(apiConfig.getStockClassifications);
+  
+  // 把 API 回傳轉成 options
+  const { industryOptions, categoryOptions, subCategoryOptions } = useMemo(() => {
+    const setIndustry = new Set<string>();
+    const setCategory = new Set<string>();
+    const setSubCategory = new Set<string>();
+  
+    classificationResp?.stockClassificationTrees?.forEach((tree) => {
+      if (tree.industry) {
+        setIndustry.add(tree.industry);
+      }
+  
+      tree.categories?.forEach((categoryNode) => {
+        if (categoryNode.category) {
+          setCategory.add(categoryNode.category);
+        }
+  
+        categoryNode.subCategories?.forEach((subCategory) => {
+          if (subCategory) {
+            setSubCategory.add(subCategory);
+          }
+        });
+      });
+    });
+  
+    const toOptions = (values: Set<string>) =>
+      Array.from(values).map((v) => ({ label: v, value: v }));
+  
+    return {
+      industryOptions: toOptions(setIndustry),
+      categoryOptions: toOptions(setCategory),
+      subCategoryOptions: toOptions(setSubCategory),
+    };
+  }, [classificationResp]);
+
   const columns: Column[] = useMemo(
     () => [
-      {
-        id: "watched",
-        type: "checkbox",
-        label: t("Watched"),
-        width: 140,
-        // ✅ 在這裡定義點擊事件
+      {id: "watched", type: "checkbox", label: t("Watched"), width: 140,
         onChange: (value, row) => {
-          // value: true 或 false
-          // row: 該行的完整數據
           updateWatchList.mutate({
             figi: row.figi,
             watched: value,
@@ -49,8 +79,9 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
         },
       },
       { id: "symbol",       type:"text",    label: t("symbol"),         width: 200,   uppercase: true },
-      { id: "industry",     type:"select",  label: t("industry"),       width: 200 ,  translateValue:true},
-      { id: "subCategory",  type:"select",  label: t("SubCategory"),    width: 200,   translateValue: true},
+      { id: "industry",     type:"select",  label: t("industry"),       width: 200 ,  translateValue:true,  selectOptions: industryOptions},
+      { id: "category",     type:"select",  label: t("category"),       width: 200,   translateValue: true, selectOptions: categoryOptions},
+      { id: "subCategory",  type:"select",  label: t("SubCategory"),    width: 200,   translateValue: true, selectOptions: subCategoryOptions},
       { id: "quoteDate",    type: "date",   label: t("Quote Date"),     width: 200,   displayDateFormat: "yyyy-MM-dd" },
       { id: "closePrice",   type: "number", label: t("Close Price"),    width: 200 },
       { id: "pe",           type: "number", label: t("PE"),             width: 200 },
@@ -58,7 +89,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       { id: "cashPerShare", type: "number", label: t("Cash Per Share"), width: 200 },
       // { id: "upside", type: "number", label: "Upside (%)", width: 200 },
     ],
-    [updateWatchList]
+    [t, updateWatchList, industryOptions, subCategoryOptions]
   );
 
   const handleSearch = useCallback(
@@ -86,15 +117,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   }, [handleSearch]);
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        minWidth: 0,
-        minHeight: 0,
-      }}
-    >
+    <Box sx={{width: "100%", display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, }} >
       <DynamicFormTable pageKey={menuTree.name} title={menuTree.name} columns={columns} data={allData} loading={stockSearch.isPending} error={stockSearch.isError ? (stockSearch.error as any) : null} hasMore={hasMore} enableInfiniteScroll={true} onSearch={handleSearch} />
     </Box>
   );

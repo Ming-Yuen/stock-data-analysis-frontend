@@ -149,20 +149,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
     return isNaN(d.getTime()) ? null : d;
   };
 
-  const getSelectOptionsFromData = (col: Column) => {
-    if (col.selectOptions && col.selectOptions.length > 0) {
-      return col.selectOptions;
-    }
-    const unique = new Set<string>();
-    displayData.forEach((row) => {
-      const v = row[col.id];
-      if (v !== null && v !== undefined && v !== "") {
-        unique.add(String(v));
-      }
-    });
-    return Array.from(unique).map((v) => ({ label: v, value: v }));
-  };
-
   // ===== 過濾 =====
   const filteredData = useMemo(() => {
     if (!sortedData) return [];
@@ -358,7 +344,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({ columns, initialRow
 
     if (col.type === "select") {
       const value = (searchValues[col.id] as TextSearchValue) ?? "";
-      const options = getSelectOptionsFromData(col);
+      const options = col.selectOptions ?? [];
       return (
         <Select size="small" fullWidth displayEmpty value={value} onChange={(e) => handleTextSearchChange(col.id, e.target.value as string)}>
           <MenuItem value="">

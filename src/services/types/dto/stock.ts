@@ -14,3 +14,25 @@ export interface StockSnapshot {
   rsi: number;
   cashPerShare: number;
 }
+
+// export interface StockClassification {
+//   industry: string;
+//   category: string;
+//   subCategory: string;
+// }
+
+// export interface StockClassificationResponse {
+//   stockClassifications: StockClassification[];
+// }
+
+export interface StockClassificationTree {
+  industry: string;
+  categories: {
+    category: string;
+    subCategories: string[];
+  }[];
+}
+
+export interface StockClassificationResponse {
+  stockClassificationTrees: StockClassificationTree[];
+}
