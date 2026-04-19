@@ -1,4 +1,3 @@
-// src/components/LanguageSwitcher.tsx
 import React, { useState, MouseEvent } from "react";
 import { Box, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
@@ -10,8 +9,8 @@ type LangCode = "en" | "zh-HK" | "zh-CN";
 interface LanguageOption {
   value: LangCode;
   label: string;
-  short: string; // 顯示在按鈕上的字，如 EN / ZH
-  region: string; // 顯示地區，如 US / HK
+  short: string;
+  region: string;
 }
 
 const LANGUAGE_OPTIONS: LanguageOption[] = [
@@ -26,7 +25,10 @@ const LanguageSwitcher: React.FC = () => {
 
   const open = Boolean(anchorEl);
 
-  const current: LanguageOption = LANGUAGE_OPTIONS.find((opt) => i18n.language.toLowerCase().startsWith(opt.value.toLowerCase())) || LANGUAGE_OPTIONS[0];
+  const current: LanguageOption =
+    LANGUAGE_OPTIONS.find((opt) =>
+      i18n.language.toLowerCase().startsWith(opt.value.toLowerCase())
+    ) || LANGUAGE_OPTIONS[0];
 
   const handleOpen = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -42,7 +44,6 @@ const LanguageSwitcher: React.FC = () => {
 
   return (
     <>
-      {/* 淺色 pill 按鈕：HK ZH ▼ */}
       <Box
         onClick={handleOpen}
         sx={(theme) => ({
@@ -63,22 +64,36 @@ const LanguageSwitcher: React.FC = () => {
           },
         })}
       >
-        {/* <span>{current.region}</span> */}
-        {/* <span>{current.short}</span> */}
         <span>Language</span>
         <ArrowDropDownIcon sx={{ fontSize: 18 }} />
       </Box>
 
-      {/* 下拉選單 */}
-      <Menu anchorEl={anchorEl} open={open} onClose={handleClose} elevation={3} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        elevation={3}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
         {LANGUAGE_OPTIONS.map((opt) => {
           const selected = opt.value === current.value;
+
           return (
-            <MenuItem key={opt.value} onClick={() => handleSelect(opt.value)} selected={selected}>
+            <MenuItem
+              key={opt.value}
+              onClick={() => handleSelect(opt.value)}
+              selected={selected}
+            >
               <ListItemIcon sx={{ minWidth: 32 }}>
                 <span style={{ fontSize: 11, fontWeight: 600 }}>{opt.region}</span>
               </ListItemIcon>
-              <ListItemText primary={opt.label} secondary={`${opt.region} ${opt.short}`} />
+
+              <ListItemText
+                primary={opt.label}
+                secondary={`${opt.region} ${opt.short}`}
+              />
+
               {selected && <CheckIcon fontSize="small" sx={{ ml: 1 }} />}
             </MenuItem>
           );
