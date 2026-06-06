@@ -9,6 +9,7 @@ export interface StockSnapshot {
   symbol: string;
   quoteDate: string;
   closePrice: number;
+  stockType: string;
   pe: number;
   peg: number;
   rsi: number;

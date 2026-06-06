@@ -463,5 +463,6 @@
     "Commer Banks Non-US": "商业银行-非美国",
     "Diversified Banking Inst": "多元化银行机构",
     "Mortgage Banks": "按揭银行",
-    "Finance-Mtge Loan/Banker": "金融-按揭贷款/经纪"
+    "Finance-Mtge Loan/Banker": "金融-按揭贷款/经纪",
+    "stockType":"股票类型"
   }

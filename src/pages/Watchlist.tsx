@@ -117,11 +117,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
 
   const columns: Column[] = useMemo(
     () => [
-      {
-        id: "watched",
-        type: "checkbox",
-        label: t("Watched"),
-        width: 140,
+      { id: "watched", type: "checkbox", label: t("Watched"), width: 140,
         onChange: (value, row) => {
           updateWatchList.mutate({
             figi: row.figi,
@@ -129,68 +125,16 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
           });
         },
       },
-      {
-        id: "symbol",
-        type: "text",
-        label: t("symbol"),
-        width: 200,
-        uppercase: true,
-      },
-      {
-        id: "industry",
-        type: "select",
-        label: t("industry"),
-        width: 200,
-        translateValue: true,
-        selectOptions: industryOptions,
-      },
-      {
-        id: "category",
-        type: "select",
-        label: t("category"),
-        width: 200,
-        translateValue: true,
-        selectOptions: categoryOptions,
-      },
-      {
-        id: "subCategory",
-        type: "select",
-        label: t("SubCategory"),
-        width: 200,
-        translateValue: true,
-        selectOptions: subCategoryOptions,
-      },
-      {
-        id: "quoteDate",
-        type: "date",
-        label: t("Quote Date"),
-        width: 200,
-        displayDateFormat: "yyyy-MM-dd",
-      },
-      {
-        id: "closePrice",
-        type: "number",
-        label: t("Close Price"),
-        width: 200,
-      },
-      {
-        id: "pe",
-        type: "number",
-        label: t("PE"),
-        width: 200,
-      },
-      {
-        id: "rsi",
-        type: "number",
-        label: t("RSI"),
-        width: 200,
-      },
-      {
-        id: "cashPerShare",
-        type: "number",
-        label: t("Cash Per Share"),
-        width: 200,
-      },
+      { id: "symbol", type: "text", label: t("symbol"), width: 200, uppercase: true, },
+      { id: "stockType", type: "select", label: t("stockType"), width: 200, uppercase: true, },
+      { id: "industry", type: "select", label: t("industry"), width: 200, translateValue: true, selectOptions: industryOptions, },
+      { id: "category", type: "select", label: t("category"), width: 200, translateValue: true, selectOptions: categoryOptions, },
+      { id: "subCategory", type: "select", label: t("SubCategory"), width: 200, translateValue: true, selectOptions: subCategoryOptions, },
+      { id: "quoteDate", type: "date", label: t("Quote Date"), width: 200, displayDateFormat: "yyyy-MM-dd", },
+      { id: "closePrice", type: "number", label: t("Close Price"), width: 200, },
+      { id: "pe", type: "number", label: t("PE"), width: 200, },
+      { id: "rsi", type: "number", label: t("RSI"), width: 200, },
+      { id: "cashPerShare", type: "number", label: t("Cash Per Share"), width: 200, },
     ],
     [t, updateWatchList, industryOptions, categoryOptions, subCategoryOptions]
   );

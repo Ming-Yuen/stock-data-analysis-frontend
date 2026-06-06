@@ -50,6 +50,11 @@ type SearchValue =
   | BooleanSearchValue;
 type SearchValuesState = Record<string, SearchValue>;
 
+type Option = {
+  label: string;
+  value: string;
+};
+
 const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
   columns,
   initialRows = [],
@@ -121,6 +126,56 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     UpdateCriteriaConfigRequest
   >(apiConfig.updateSearchCriteriaConfig);
 
+  const normalizeOptionValue = useCallback((value: any, uppercase?: boolean): string => {
+    const s = String(value ?? "");
+    return uppercase ? s.toUpperCase() : s;
+  }, []);
+
+  const selectOptionsMap = useMemo<Record<string, Option[]>>(() => {
+    const result: Record<string, Option[]> = {};
+
+    columns.forEach((col) => {
+      if (col.type !== "select") return;
+
+      if (col.selectOptions && col.selectOptions.length > 0) {
+        result[col.id] = col.selectOptions.map((opt) => {
+          const normalizedValue = normalizeOptionValue(opt.value, col.uppercase);
+          return {
+            label: String(opt.label ?? opt.value),
+            value: normalizedValue,
+          };
+        });
+        return;
+      }
+
+      const valueSet = new Set<string>();
+      displayData.forEach((row) => {
+        const raw = row[col.id];
+        if (raw === null || raw === undefined) return;
+        const normalizedValue = normalizeOptionValue(raw, col.uppercase).trim();
+        if (normalizedValue !== "") {
+          valueSet.add(normalizedValue);
+        }
+      });
+
+      result[col.id] = Array.from(valueSet)
+        .sort((a, b) => a.localeCompare(b))
+        .map((v) => ({
+          label: v,
+          value: v,
+        }));
+    });
+
+    return result;
+  }, [columns, displayData, normalizeOptionValue]);
+
+  const getSelectOptions = useCallback(
+    (col: Column): Option[] => {
+      return selectOptionsMap[col.id] ?? [];
+    },
+    [selectOptionsMap]
+  );
+
   const handleCellChange = async (
     rowIndex: number,
     columnId: string,
@@ -132,8 +187,13 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       return;
     }
 
+    const normalizedValue =
+      col?.type === "select"
+        ? normalizeOptionValue(value, col.uppercase)
+        : value;
+
     const updatedRows = displayData.map((r, i) =>
-      i === rowIndex ? { ...r, [columnId]: value } : r
+      i === rowIndex ? { ...r, [columnId]: normalizedValue } : r
     );
     setDisplayData(updatedRows);
 
@@ -143,7 +203,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
     if (col?.onChange) {
       try {
-        await col.onChange(value, updatedRows[rowIndex]);
+        await col.onChange(normalizedValue, updatedRows[rowIndex]);
       } catch (err) {
         console.error("Column action failed:", err);
       }
@@ -423,8 +483,9 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     }
 
     if (col.type === "select") {
-      const value = (searchValues[col.id] as TextSearchValue) ?? "";
-      const options = col.selectOptions ?? [];
+      const value = normalizeOptionValue(searchValues[col.id] ?? "", col.uppercase);
+      const options = getSelectOptions(col);
+
       return (
         <Select
           size="small"
@@ -582,15 +643,18 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     }
 
     if (col.type === "select") {
+      const options = getSelectOptions(col);
+      const selectValue = normalizeOptionValue(row[col.id] ?? "", col.uppercase);
+
       return (
         <TableCell>
           <Select
             fullWidth
             size="small"
-            value={row[col.id] ?? ""}
+            value={selectValue}
             onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)}
           >
-            {col.selectOptions?.map((opt) => {
+            {options.map((opt) => {
               const raw = opt.label ?? opt.value;
               const text = col.translateValue ? t(`${String(raw)}`) : String(raw);
               return (
