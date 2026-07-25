@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Box, Icon, Tabs, Tab, Paper } from "@mui/material";
 import { ExpandLess, ExpandMore, FolderOpen, Folder, Description, Close } from "@mui/icons-material";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Outlet, useNavigate } from "react-router-dom";
 import { MenuTree } from "../services/types/dto/menu";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import "../i18n";
@@ -38,31 +37,22 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
   const [tabs, setTabs] = useState<TabInfo[]>(getStoredTabs);
   const [activeTab, setActiveTab] = useState<string>(getStoredActiveTab);
   const navigate = useNavigate();
-  const location = useLocation();
-  const { t } = useTranslation();
 
   useEffect(() => {
     sessionStorage.setItem("layout-tabs", JSON.stringify(tabs));
   }, [tabs]);
 
   useEffect(() => {
-    if (activeTab) {
-      sessionStorage.setItem("layout-activeTab", activeTab);
-    } else {
-      sessionStorage.removeItem("layout-activeTab");
-    }
+    if (activeTab) sessionStorage.setItem("layout-activeTab", activeTab);
+    else sessionStorage.removeItem("layout-activeTab");
   }, [activeTab]);
 
   useEffect(() => {
-    if (tabs.length === 0) {
-      setActiveTab("");
-    }
+    if (tabs.length === 0) setActiveTab("");
   }, [tabs]);
 
   useEffect(() => {
-    if (activeTab && tabs.length > 0 && !tabs.find((tab) => tab.id === activeTab)) {
-      setActiveTab(tabs[0].id);
-    }
+    if (activeTab && tabs.length > 0 && !tabs.find((tab) => tab.id === activeTab)) setActiveTab(tabs[0].id);
   }, [tabs, activeTab]);
 
   const handleToggle = (id: string) => setOpenItems((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -75,13 +65,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
         setActiveTab(existingTab.id);
         navigate(existingTab.path);
       } else {
-        const newTab: TabInfo = {
-          id: `tab-${Date.now()}`,
-          label: item.name,
-          path: item.path,
-          menuId: item.menuId,
-        };
-
+        const newTab: TabInfo = { id: `tab-${Date.now()}`, label: item.name, path: item.path, menuId: item.menuId };
         const newTabs = [...tabs, newTab];
         setTabs(newTabs);
         setActiveTab(newTab.id);
@@ -91,13 +75,11 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
-    if (newValue) {
-      const tab = tabs.find((t) => t.id === newValue);
-      if (tab) {
-        setActiveTab(newValue);
-        navigate(tab.path);
-      }
-    }
+    if (!newValue) return;
+    const tab = tabs.find((t) => t.id === newValue);
+    if (!tab) return;
+    setActiveTab(newValue);
+    navigate(tab.path);
   };
 
   const handleCloseTab = (tabId: string, event: React.MouseEvent) => {
@@ -130,7 +112,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
           <ListItem disablePadding sx={{ pl: 2 + level * 2 }}>
             <ListItemButton onClick={() => (hasChildren ? handleToggle(item.menuId) : handleMenuClick(item))}>
               <ListItemIcon>{item.icon ? <Icon>{item.icon}</Icon> : hasChildren ? isOpen ? <FolderOpen /> : <Folder /> : <Description />}</ListItemIcon>
-              <ListItemText primary={item.name}/>
+              <ListItemText primary={item.name} />
               {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
             </ListItemButton>
           </ListItem>
@@ -144,50 +126,18 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
     });
 
   return (
-    <Box sx={{ display: "flex", height: "100vh" }}>
-      <Drawer
-        variant="permanent"
-        anchor="left"
-        sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: DRAWER_WIDTH,
-            boxSizing: "border-box",
-            height: "100%",
-          },
-        }}
-      >
+    <Box sx={{ display: "flex", height: "100vh", bgcolor: "background.default" }}>
+      <Drawer variant="permanent" anchor="left" sx={{ width: DRAWER_WIDTH, flexShrink: 0, "& .MuiDrawer-paper": { width: DRAWER_WIDTH, boxSizing: "border-box", height: "100%", bgcolor: "background.paper", borderColor: "divider" } }}>
         <List sx={{ flexGrow: 1, overflow: "auto" }}>{renderMenu(menuData)}</List>
       </Drawer>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-        }}
-      >
-        {/* 頂部語言切換列 */}
-        <Box
-          sx={{
-            height: 40,
-            px: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            borderBottom: 1,
-            borderColor: "divider",
-            flexShrink: 0,
-          }}
-        >
+      <Box component="main" sx={{ flexGrow: 1, display: "flex", flexDirection: "column", minWidth: 0, bgcolor: "background.default" }}>
+        <Box sx={{ height: 40, px: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", borderBottom: 1, borderColor: "divider", bgcolor: "background.paper", flexShrink: 0 }}>
           <LanguageSwitcher />
         </Box>
 
         {tabs.length > 0 && activeTab && (
-          <Paper elevation={1} sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
+          <Paper elevation={0} sx={{ borderBottom: 1, borderColor: "divider", borderRadius: 0, bgcolor: "background.paper", flexShrink: 0 }}>
             <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
               {tabs.map((tab) => (
                 <Tab
@@ -196,17 +146,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
                   label={
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <span>{tab.label}</span>
-                      <Close
-                        sx={{
-                          fontSize: 16,
-                          ml: 1,
-                          "&:hover": { backgroundColor: "action.hover" },
-                          borderRadius: "50%",
-                          p: 0.5,
-                          cursor: "pointer",
-                        }}
-                        onClick={(event) => handleCloseTab(tab.id, event)}
-                      />
+                      <Close sx={{ fontSize: 16, ml: 1, "&:hover": { bgcolor: "action.hover" }, borderRadius: "50%", p: 0.5, cursor: "pointer" }} onClick={(event) => handleCloseTab(tab.id, event)} />
                     </Box>
                   }
                   sx={{ minHeight: 48, textTransform: "none" }}
@@ -216,27 +156,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
           </Paper>
         )}
 
-        <Box
-          sx={{
-            flexGrow: 1,
-            overflow: "auto",
-            p: tabs.length > 0 ? 0.5 : 0,
-          }}
-        >
-          {tabs.length === 0 && location.pathname === "/" && (
-            <Box
-              sx={{
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "column",
-              }}
-            >
-              <h1>{t("welcomeTitle")}</h1>
-              <p>{t("welcomeDesc")}</p>
-            </Box>
-          )}
+        <Box sx={{ flexGrow: 1, overflow: "auto", p: 1.5, bgcolor: "background.default" }}>
           <Outlet />
         </Box>
       </Box>

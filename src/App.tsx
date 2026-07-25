@@ -7,6 +7,7 @@ import { useFetch } from "./hooks/api/useApi";
 import { apiConfig } from "./apiConfig";
 import { WatchListPage } from "./pages/Watchlist";
 import { MenuTree, MenuEnquiryResponse } from "./services/types/dto/menu";
+import HomeDashboard from "./pages/HomeDashboard";
 
 // 页面配置接口
 interface PageConfig {
@@ -93,6 +94,7 @@ const App: React.FC = () => {
 
         {/* 404 */}
         <Route path="*" element={<div>頁面不存在</div>} />
+        <Route index element={<HomeDashboard />} />
       </Route>
     </Routes>
   );
