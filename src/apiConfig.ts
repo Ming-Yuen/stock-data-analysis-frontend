@@ -3,7 +3,7 @@ export interface ApiEndpoint {
   url: string;
 }
 
-type ApiKey = "getMenu" | "updateSearchCriteriaConfig" | "getSearchCriteriaConfig" | "getJobList" | "launchJobList" | "getWatchList" | "updateWatchList" | "getStockClassifications";
+type ApiKey = "getMenu" | "updateSearchCriteriaConfig" | "getSearchCriteriaConfig" | "getJobList" | "launchJobList" | "getWatchList" | "updateWatchList" | "getStockClassifications"| "overview_dashboard";
 
 // Step 2：编写配置并用 satisfies 验证
 export const apiConfig = {
@@ -38,6 +38,10 @@ export const apiConfig = {
   getStockClassifications:{
     method: "post",
     url: process.env.REACT_APP_STOCK_CLASSIFICATION!,
+  },
+  overview_dashboard: {
+    method: "post",
+    url: process.env.REACT_APP_OVERVIEW_DASHBOARD!,
   },
 } satisfies Record<ApiKey, ApiEndpoint>;
 
