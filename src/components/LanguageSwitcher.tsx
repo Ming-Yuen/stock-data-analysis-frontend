@@ -8,19 +8,19 @@ type LangCode = "en" | "zh-HK" | "zh-CN";
 
 interface LanguageOption {
   value: LangCode;
-  label: string;
+  labelKey: string;
   short: string;
   region: string;
 }
 
 const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { value: "en", label: "English", short: "EN", region: "US" },
-  { value: "zh-HK", label: "繁體中文", short: "ZH", region: "HK" },
-  { value: "zh-CN", label: "简体中文", short: "ZH", region: "CN" },
+  { value: "en", labelKey: "languageSwitcher.english", short: "EN", region: "US" },
+  { value: "zh-HK", labelKey: "languageSwitcher.traditionalChinese", short: "ZH", region: "HK" },
+  { value: "zh-CN", labelKey: "languageSwitcher.simplifiedChinese", short: "ZH", region: "CN" },
 ];
 
 const LanguageSwitcher: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   const open = Boolean(anchorEl);
@@ -64,7 +64,7 @@ const LanguageSwitcher: React.FC = () => {
           },
         })}
       >
-        <span>Language</span>
+        <span>{t("languageSwitcher.label")}</span>
         <ArrowDropDownIcon sx={{ fontSize: 18 }} />
       </Box>
 
@@ -90,7 +90,7 @@ const LanguageSwitcher: React.FC = () => {
               </ListItemIcon>
 
               <ListItemText
-                primary={opt.label}
+                primary={t(opt.labelKey)}
                 secondary={`${opt.region} ${opt.short}`}
               />
 

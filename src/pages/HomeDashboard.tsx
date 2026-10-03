@@ -17,10 +17,11 @@ import MetricCard from "../components/MetricCard";
 import { useFetch } from "../hooks/api/useApi";
 import { DashboardResponse } from "../types/overview";
 import { apiConfig } from "../apiConfig";
+import { useTranslation } from "react-i18next";
 
 const getEventColor = (level: string): "error" | "warning" | "default" => {
-  if (level === "高") return "error";
-  if (level === "中") return "warning";
+  if (level === "HIGH") return "error";
+  if (level === "MEDIUM") return "warning";
   return "default";
 };
 
@@ -38,6 +39,7 @@ const getVolumeRatioColor = (value: string) => {
 };
 
 const HomeDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { data, isLoading, isError, error } = useFetch<DashboardResponse>(apiConfig.overview_dashboard, {});
 
   if (isLoading) {
@@ -46,7 +48,7 @@ const HomeDashboard: React.FC = () => {
         elevation={0}
         sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
       >
-        <Typography sx={{ fontSize: 14, color: "text.secondary" }}>Loading dashboard...</Typography>
+        <Typography sx={{ fontSize: 14, color: "text.secondary" }}>{t("dashboard.loading")}</Typography>
       </Paper>
     );
   }
@@ -58,7 +60,7 @@ const HomeDashboard: React.FC = () => {
         sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
       >
         <Typography sx={{ fontSize: 14, color: "error.main" }}>
-          Failed to load dashboard{error instanceof Error ? `: ${error.message}` : ""}
+          {t("dashboard.loadError")}{error instanceof Error ? `: ${error.message}` : ""}
         </Typography>
       </Paper>
     );
@@ -77,10 +79,12 @@ const HomeDashboard: React.FC = () => {
     executionBias,
   } = data;
 
-  const fearGreedSignal = signalRows.find((item) => item.name === "贪婪恐慌指数");
-  const vixSignal = signalRows.find((item) => item.name === "VIX");
-  const putCallSignal = signalRows.find((item) => item.name === "Put / Call");
-  const breadthSignal = signalRows.find((item) => item.name === "市场广度");
+  const fearGreedSignal = signalRows.find((item) => item.code === "FEAR_GREED");
+  const vixSignal = signalRows.find((item) => item.code === "VIX");
+  const putCallSignal = signalRows.find((item) => item.code === "PUT_CALL");
+  const breadthSignal = signalRows.find((item) => item.code === "MARKET_BREADTH");
+  const translateMessage = (message: { code: string; params: Record<string, string | number> }) =>
+    t(`dashboard.messages.${message.code}`, message.params);
 
   return (
     <Stack spacing={2}>
@@ -92,14 +96,14 @@ const HomeDashboard: React.FC = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Schedule sx={{ fontSize: 18, color: "text.secondary" }} />
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              更新时间：{snapshotMeta.updateTime} ／ 市场日期：{snapshotMeta.marketDate}
+              {t("dashboard.updatedAt")}：{snapshotMeta.updateTime} ／ {t("dashboard.marketDate")}：{snapshotMeta.marketDate}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
             <Language sx={{ fontSize: 18, color: "text.secondary" }} />
-            <Typography sx={{ fontSize: 13, color: "text.secondary" }}>数据来源：</Typography>
+            <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{t("dashboard.dataSource")}：</Typography>
             {snapshotMeta.sources.map((source) => (
-              <Chip key={source} label={source} size="small" variant="outlined" />
+              <Chip key={source} label={t(`dashboard.source.${source}`)} size="small" variant="outlined" />
             ))}
           </Box>
         </Stack>
@@ -162,58 +166,58 @@ const HomeDashboard: React.FC = () => {
                       letterSpacing: 0.6,
                     }}
                   >
-                    市场状态
+                    {t("dashboard.section.marketStatus")}
                   </Typography>
                   <Typography sx={{ fontSize: 30, lineHeight: 1.2, fontWeight: 800, color: "text.primary", mt: 0.5 }}>
-                    {marketSummary.title}
+                    {t(`dashboard.marketSummary.${marketSummary.titleCode}`)}
                   </Typography>
                   <Typography sx={{ fontSize: 14, color: "text.secondary", mt: 1, maxWidth: 780 }}>
-                    {marketSummary.description}
+                    {translateMessage(marketSummary.description)}
                   </Typography>
                 </Box>
-                <Chip label={marketSummary.tag} size="small" variant="outlined" />
+                <Chip label={translateMessage(marketSummary.tag)} size="small" variant="outlined" />
               </Box>
             </Paper>
 
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <MetricCard
-                  title="贪婪恐慌指数"
+                  title={t("dashboard.signal.FEAR_GREED")}
                   value={fearGreedSignal?.value ?? "--"}
-                  status={fearGreedSignal?.status ?? "--"}
+                  status={fearGreedSignal ? t(`dashboard.sentiment.${fearGreedSignal.statusCode}`) : "--"}
                   trend="up"
                   change=""
-                  subtitle={`来源：${fearGreedSignal?.source ?? "--"}`}
+                  subtitle={`${t("dashboard.sourceLabel")}：${fearGreedSignal ? t(`dashboard.source.${fearGreedSignal.sourceCode}`) : "--"}`}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <MetricCard
-                  title="VIX"
+                  title={t("dashboard.signal.VIX")}
                   value={vixSignal?.value ?? "--"}
-                  status={vixSignal?.status ?? "--"}
+                  status={vixSignal ? t(`dashboard.sentiment.${vixSignal.statusCode}`) : "--"}
                   trend="down"
                   change=""
-                  subtitle={`来源：${vixSignal?.source ?? "--"}`}
+                  subtitle={`${t("dashboard.sourceLabel")}：${vixSignal ? t(`dashboard.source.${vixSignal.sourceCode}`) : "--"}`}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <MetricCard
-                  title="Put / Call"
+                  title={t("dashboard.signal.PUT_CALL")}
                   value={putCallSignal?.value ?? "--"}
-                  status={putCallSignal?.status ?? "--"}
+                  status={putCallSignal ? t(`dashboard.sentiment.${putCallSignal.statusCode}`) : "--"}
                   trend="neutral"
                   change=""
-                  subtitle={`来源：${putCallSignal?.source ?? "--"}`}
+                  subtitle={`${t("dashboard.sourceLabel")}：${putCallSignal ? t(`dashboard.source.${putCallSignal.sourceCode}`) : "--"}`}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <MetricCard
-                  title="市场广度"
+                  title={t("dashboard.signal.MARKET_BREADTH")}
                   value={breadthSignal?.value ?? "--"}
-                  status={breadthSignal?.status ?? "--"}
+                  status={breadthSignal ? t(`dashboard.sentiment.${breadthSignal.statusCode}`) : "--"}
                   trend="up"
                   change=""
-                  subtitle={`来源：${breadthSignal?.source ?? "--"}`}
+                  subtitle={`${t("dashboard.sourceLabel")}：${breadthSignal ? t(`dashboard.source.${breadthSignal.sourceCode}`) : "--"}`}
                 />
               </Grid>
             </Grid>
@@ -224,7 +228,7 @@ const HomeDashboard: React.FC = () => {
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <ShowChart fontSize="small" />
-                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>指数层观察</Typography>
+                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>{t("dashboard.section.indexObservation")}</Typography>
               </Box>
               <Grid container spacing={1.2}>
                 {indexRows.map((item) => (
@@ -233,14 +237,14 @@ const HomeDashboard: React.FC = () => {
                       <Stack spacing={0.6}>
                         <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
                           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                            {item.name}（{item.symbol}）
+                            {t(`dashboard.index.${item.nameCode}`)}（{item.symbol}）
                           </Typography>
                           <Typography sx={{ fontSize: 13, fontWeight: 700, color: getTrendColor(item.trend) }}>
                             {item.day}
                           </Typography>
                         </Box>
                         <Typography sx={{ fontSize: 22, fontWeight: 800, color: "text.primary" }}>{item.value}</Typography>
-                        <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{item.note}</Typography>
+                        <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{t(`dashboard.indexNote.${item.noteCode}`)}</Typography>
                       </Stack>
                     </Box>
                   </Grid>
@@ -254,11 +258,11 @@ const HomeDashboard: React.FC = () => {
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <InfoOutlined fontSize="small" />
-                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>贪婪恐慌七因子</Typography>
+                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>{t("dashboard.section.fearGreedFactors")}</Typography>
               </Box>
               <Grid container spacing={1.2}>
                 {fearGreedComponents.map((item) => (
-                  <Grid key={item.name} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Grid key={item.code} size={{ xs: 12, sm: 6, md: 4 }}>
                     <Box
                       sx={{
                         p: 1.5,
@@ -270,13 +274,13 @@ const HomeDashboard: React.FC = () => {
                       }}
                     >
                       <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.6 }}>
-                        {item.name}
+                        {t(`dashboard.factor.${item.code}`)}
                       </Typography>
                       <Typography sx={{ fontSize: 12, fontWeight: 700, color: "text.secondary", mb: 0.6 }}>
-                        当前判断：{item.value}
+                        {t("dashboard.currentAssessment")}：{t(`dashboard.sentiment.${item.statusCode}`)}
                       </Typography>
                       <Typography sx={{ fontSize: 12, lineHeight: 1.55, color: "text.secondary" }}>
-                        {item.desc}
+                        {t("dashboard.indexValue", { value: item.value ?? "--" })}
                       </Typography>
                     </Box>
                   </Grid>
@@ -301,9 +305,9 @@ const HomeDashboard: React.FC = () => {
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <ShowChart fontSize="small" />
-                  <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>ETF 观察列表</Typography>
+                  <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>{t("dashboard.section.etfObservation")}</Typography>
                 </Box>
-                <Typography sx={{ fontSize: 12, color: "text.secondary" }}>新增均线偏离与量能确认</Typography>
+                <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{t("dashboard.etfSubtitle")}</Typography>
               </Box>
 
               <Box sx={{ overflowX: "auto" }}>
@@ -322,16 +326,16 @@ const HomeDashboard: React.FC = () => {
                       letterSpacing: 0.4,
                     }}
                   >
-                    <Box>代码</Box>
-                    <Box>价格</Box>
-                    <Box>日变动</Box>
+                    <Box>{t("dashboard.table.symbol")}</Box>
+                    <Box>{t("dashboard.table.price")}</Box>
+                    <Box>{t("dashboard.table.dailyChange")}</Box>
                     <Box>RSI</Box>
-                    <Box>判断</Box>
-                    <Box>距20日均线</Box>
-                    <Box>量比(5日)</Box>
-                    <Box>备注</Box>
-                    <Box>来源</Box>
-                    <Box>时间</Box>
+                    <Box>{t("dashboard.table.assessment")}</Box>
+                    <Box>{t("dashboard.table.ma20Distance")}</Box>
+                    <Box>{t("dashboard.table.volumeRatio5d")}</Box>
+                    <Box>{t("dashboard.table.note")}</Box>
+                    <Box>{t("dashboard.table.source")}</Box>
+                    <Box>{t("dashboard.table.time")}</Box>
                   </Box>
                   <Divider />
                   {etfRows.map((row) => (
@@ -362,7 +366,7 @@ const HomeDashboard: React.FC = () => {
                         </Box>
                         <Box sx={{ color: "text.primary", fontWeight: 600 }}>{row.rsi}</Box>
                         <Box>
-                          <Chip label={row.bias} size="small" variant="outlined" />
+                          <Chip label={t(`dashboard.bias.${row.biasCode}`)} size="small" variant="outlined" />
                         </Box>
                         <Box
                           sx={{
@@ -388,8 +392,8 @@ const HomeDashboard: React.FC = () => {
                           <BarChart sx={{ fontSize: 15 }} />
                           {row.volumeRatio5d}
                         </Box>
-                        <Box sx={{ color: "text.secondary" }}>{row.note}</Box>
-                        <Box sx={{ color: "text.secondary" }}>{row.source}</Box>
+                        <Box sx={{ color: "text.secondary" }}>{t(`dashboard.etfNote.${row.noteCode}`)}</Box>
+                        <Box sx={{ color: "text.secondary" }}>{t(`dashboard.source.${row.sourceCode}`)}</Box>
                         <Box sx={{ color: "text.secondary" }}>{row.time}</Box>
                       </Box>
                       <Divider />
@@ -404,30 +408,30 @@ const HomeDashboard: React.FC = () => {
               sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary", mb: 1.5 }}>
-                量价判断规则
+                {t("dashboard.section.priceVolumeRules")}
               </Typography>
               <Grid container spacing={1.2}>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>均线偏离</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>{t("dashboard.rules.maTitle")}</Typography>
                     <Typography sx={{ fontSize: 12, lineHeight: 1.55, color: "text.secondary" }}>
-                      距20日均线偏离度越高，代表价格离短中期均衡越远。若同时 RSI 偏高，通常更接近短线过热区。
+                      {t("dashboard.rules.maDescription")}
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>量能确认</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>{t("dashboard.rules.volumeTitle")}</Typography>
                     <Typography sx={{ fontSize: 12, lineHeight: 1.55, color: "text.secondary" }}>
-                      量比 = 当前成交量 / 过去5日平均成交量。若大于 1.2 且价格同步上涨，说明有更明显的真实资金参与。
+                      {t("dashboard.rules.volumeDescription")}
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>组合解读</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>{t("dashboard.rules.combinationTitle")}</Typography>
                     <Typography sx={{ fontSize: 12, lineHeight: 1.55, color: "text.secondary" }}>
-                      最强组合通常是“上涨 + 量比放大 + 偏离度上升”；最需要小心的是“偏离度高，但量比不足”的追高状态。
+                      {t("dashboard.rules.combinationDescription")}
                     </Typography>
                   </Box>
                 </Grid>
@@ -438,17 +442,19 @@ const HomeDashboard: React.FC = () => {
               elevation={0}
               sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
-              <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary", mb: 1.5 }}>信号矩阵</Typography>
+              <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary", mb: 1.5 }}>{t("dashboard.section.signalMatrix")}</Typography>
               <Grid container spacing={1.2}>
                 {signalRows.map((item) => (
-                  <Grid key={item.name} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Grid key={item.code} size={{ xs: 12, sm: 6, md: 4 }}>
                     <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
-                      <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 0.4 }}>{item.name}</Typography>
+                      <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 0.4 }}>{t(`dashboard.signal.${item.code}`)}</Typography>
                       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
                         <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary" }}>{item.value}</Typography>
-                        <Chip label={item.status} size="small" variant="outlined" />
+                        <Chip label={t(`dashboard.sentiment.${item.statusCode}`)} size="small" variant="outlined" />
                       </Box>
-                      <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.8 }}>来源：{item.source}</Typography>
+                      <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.8 }}>
+                        {t("dashboard.sourceLabel")}：{t(`dashboard.source.${item.sourceCode}`)}
+                      </Typography>
                     </Box>
                   </Grid>
                 ))}
@@ -465,12 +471,12 @@ const HomeDashboard: React.FC = () => {
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <WarningAmber fontSize="small" />
-                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>风险规则提醒</Typography>
+                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>{t("dashboard.section.riskAlerts")}</Typography>
               </Box>
               <Stack spacing={1.2}>
                 {alerts.map((item, index) => (
                   <Box key={index} sx={{ p: 1.25, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
-                    <Typography sx={{ fontSize: 13, lineHeight: 1.45, color: "text.primary" }}>{item}</Typography>
+                    <Typography sx={{ fontSize: 13, lineHeight: 1.45, color: "text.primary" }}>{translateMessage(item)}</Typography>
                   </Box>
                 ))}
               </Stack>
@@ -482,12 +488,12 @@ const HomeDashboard: React.FC = () => {
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <EventNote fontSize="small" />
-                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>即将发生</Typography>
+                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary" }}>{t("dashboard.section.upcoming")}</Typography>
               </Box>
               <Stack spacing={1.2}>
                 {events.map((item) => (
                   <Box
-                    key={`${item.name}-${item.time}`}
+                    key={`${item.nameCode}-${item.time}`}
                     sx={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -501,10 +507,10 @@ const HomeDashboard: React.FC = () => {
                     }}
                   >
                     <Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>{item.name}</Typography>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>{t(`dashboard.event.${item.nameCode}`)}</Typography>
                       <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.3 }}>{item.time}</Typography>
                     </Box>
-                    <Chip label={item.level} size="small" color={getEventColor(item.level)} variant="outlined" />
+                    <Chip label={t(`dashboard.eventLevel.${item.levelCode}`)} size="small" color={getEventColor(item.levelCode)} variant="outlined" />
                   </Box>
                 ))}
               </Stack>
@@ -515,10 +521,10 @@ const HomeDashboard: React.FC = () => {
               sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary", mb: 1 }}>
-                {executionBias.title}
+                {t(`dashboard.execution.${executionBias.titleCode}`)}
               </Typography>
               <Typography sx={{ fontSize: 14, lineHeight: 1.6, color: "text.secondary" }}>
-                {executionBias.description}
+                {t(`dashboard.execution.${executionBias.descriptionCode}`)}
               </Typography>
             </Paper>
           </Stack>

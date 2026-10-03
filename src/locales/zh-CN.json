@@ -464,5 +464,25 @@
     "Diversified Banking Inst": "多元化银行机构",
     "Mortgage Banks": "按揭银行",
     "Finance-Mtge Loan/Banker": "金融-按揭贷款/经纪",
-    "stockType":"股票类型"
+    "stockType":"股票类型",
+    "languageSwitcher":{"label":"语言","english":"英文","traditionalChinese":"繁体中文","simplifiedChinese":"简体中文"},
+    "menu":{"user":"用户","stockAnalysis":"股票分析","dataManagement":"数据管理","jobConfiguration":"任务配置","watchList":"观察列表","unknown":"菜单"},
+    "dashboard": {
+      "loading":"正在加载仪表板……","loadError":"无法加载仪表板","updatedAt":"更新时间","marketDate":"市场日期","dataSource":"数据来源","sourceLabel":"来源","currentAssessment":"当前判断","indexValue":"指数值：{{value}}","etfSubtitle":"加入均线偏离与量能确认",
+      "section":{"marketStatus":"市场状态","indexObservation":"指数层观察","fearGreedFactors":"贪婪恐慌七因子","etfObservation":"ETF 观察列表","priceVolumeRules":"量价判断规则","signalMatrix":"信号矩阵","riskAlerts":"风险规则提醒","upcoming":"即将发生"},
+      "source":{"INTERNAL_MARKET_SNAPSHOT":"内部行情快照","CNN_FEAR_GREED":"CNN 贪婪恐慌指数","US_TREASURY":"美国财政部","CNN":"CNN","CNN_SENTIMENT_FACTOR":"CNN 情绪因子"},
+      "signal":{"FEAR_GREED":"贪婪恐慌指数","VIX":"VIX","PUT_CALL":"Put / Call","MARKET_BREADTH":"市场广度"},
+      "sentiment":{"INSUFFICIENT_DATA":"数据不足","EXTREME_FEAR":"极度恐慌","FEAR":"恐慌","NEUTRAL":"中性","GREED":"贪婪","EXTREME_GREED":"极度贪婪"},
+      "index":{"SP500":"标普500","NASDAQ100":"纳指100","PHLX_SEMICONDUCTOR":"费半指数","RUSSELL2000":"罗素2000"},
+      "indexNote":{"UP":"当日上涨","DOWN":"当日下跌","FLAT":"当日持平"},
+      "factor":{"MARKET_MOMENTUM":"市场动能","STOCK_PRICE_STRENGTH":"股价强度","STOCK_PRICE_BREADTH":"股价广度","PUT_CALL_OPTIONS":"Put/Call 期权比","MARKET_VOLATILITY":"市场波动率","SAFE_HAVEN_DEMAND":"避险需求","JUNK_BOND_DEMAND":"垃圾债需求"},
+      "bias":{"INSUFFICIENT_DATA":"数据不足","HOT":"偏热","WEAK":"偏弱","STRONG":"偏强","NEUTRAL_WEAK":"中性偏弱"},
+      "etfNote":{"RSI_HOT":"RSI 已进入偏热区间","MA20_EXTENDED":"价格明显偏离20日均线","HIGH_VOLUME":"成交量高于近5日平均","NORMAL":"指标处于常规区间"},
+      "table":{"symbol":"代码","price":"价格","dailyChange":"日变动","assessment":"判断","ma20Distance":"距20日均线","volumeRatio5d":"量比（5日）","note":"备注","source":"来源","time":"时间"},
+      "rules":{"maTitle":"均线偏离","maDescription":"距20日均线偏离度越高，代表价格离短中期均衡越远。若同时 RSI 偏高，通常更接近短线过热区。","volumeTitle":"量能确认","volumeDescription":"量比 = 当前成交量 / 过去5日平均成交量。若大于 1.2 且价格同步上涨，说明有更明显的真实资金参与。","combinationTitle":"组合解读","combinationDescription":"最强组合通常是“上涨 + 量比放大 + 偏离度上升”；最需要小心的是“偏离度高，但量比不足”的追高状态。"},
+      "messages":{"ETF_OVERHEATED":"{{ticker}}：RSI {{rsi}} 且高于20日均线 {{deviation}}，短线处于过热区。","ETF_OVERSOLD":"{{ticker}}：RSI {{rsi}}，短线动能偏弱并进入超卖观察区。","ETF_VOLUME_CONFIRMED":"{{ticker}}：价格上涨且量比达 {{volumeRatio}}，升势获成交量确认。","ETF_LOW_VOLUME_EXTENSION":"{{ticker}}：高于20日均线 {{deviation}}，但量比仅 {{volumeRatio}}，需留意缩量追高风险。","EXTREME_GREED":"CNN 贪婪恐慌指数为 {{score}}，市场情绪进入极度贪婪区。","EXTREME_FEAR":"CNN 贪婪恐慌指数为 {{score}}，市场情绪进入极度恐慌区。","NO_ALERTS":"目前未触发过热、超卖、放量上涨或缩量追高警示。","SUMMARY_WITH_SENTIMENT":"CNN 贪婪恐慌指数为 {{score}}；观察 ETF 中有 {{up}} 个上涨、{{down}} 个下跌。","SUMMARY_WITHOUT_SENTIMENT":"CNN 情绪数据不足；观察 ETF 中有 {{up}} 个上涨、{{down}} 个下跌。","DATE_UNAVAILABLE":"数据日期不足","MARKET_CLOSE":"{{date}} 收盘"},
+      "marketSummary":{"STRONG_BUT_OVERHEATED":"风险偏好偏强，但情绪已过热","HOT_BUT_DIVERGING":"情绪偏热，但价格动能出现分化","FEAR_WITH_RECOVERY":"恐慌情绪下出现价格修复","WEAK_AND_FEARFUL":"风险偏好偏弱，市场处于恐慌区","BULLISH_NON_EXTREME":"市场动能偏多，情绪尚未进入极端区","BEARISH":"市场动能偏弱，宜控制下行风险","DIVERGING":"市场方向分化，等待更明确信号"},
+      "execution":{"EXECUTION_BIAS":"执行倾向","HIGH_RISK":"多项风险条件同时成立，宜降低追价与高波动部位，等待 RSI、均线偏离或量能恢复正常。","SELECTIVE":"部分风险条件已触发，维持选择性部署，新增部位应优先确认量能及均线偏离。","BULLISH":"ETF 动能整体偏多且未触发主要风险条件，可维持偏多思路并设置风险边界。","DEFENSIVE":"ETF 动能整体偏弱且未见明确反转确认，宜保守控制仓位并等待放量回升。","NEUTRAL":"当前数据不足或方向分化，宜维持中性仓位并等待更明确的量价信号。"},
+      "eventLevel":{"HIGH":"高","MEDIUM":"中","LOW":"低"},"event":{}
+    }
   }

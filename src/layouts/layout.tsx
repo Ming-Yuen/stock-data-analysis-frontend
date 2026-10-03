@@ -5,12 +5,13 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { MenuTree } from "../services/types/dto/menu";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import "../i18n";
+import { useTranslation } from "react-i18next";
 
 const DRAWER_WIDTH = 240;
 
 interface TabInfo {
   id: string;
-  label: string;
+  label?: string;
   path: string;
   menuId: string;
 }
@@ -32,7 +33,16 @@ const getStoredActiveTab = (): string => {
   return sessionStorage.getItem("layout-activeTab") || "";
 };
 
+const MENU_I18N_KEYS: Record<string, string> = {
+  "/user": "menu.user",
+  "/stockAnalysis": "menu.stockAnalysis",
+  "/dataManagement": "menu.dataManagement",
+  "/jobConfig": "menu.jobConfiguration",
+  "/watchlist": "menu.watchList",
+};
+
 const Layout: React.FC<LayoutProps> = ({ menuData }) => {
+  const { t } = useTranslation();
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
   const [tabs, setTabs] = useState<TabInfo[]>(getStoredTabs);
   const [activeTab, setActiveTab] = useState<string>(getStoredActiveTab);
@@ -112,7 +122,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
           <ListItem disablePadding sx={{ pl: 2 + level * 2 }}>
             <ListItemButton onClick={() => (hasChildren ? handleToggle(item.menuId) : handleMenuClick(item))}>
               <ListItemIcon>{item.icon ? <Icon>{item.icon}</Icon> : hasChildren ? isOpen ? <FolderOpen /> : <Folder /> : <Description />}</ListItemIcon>
-              <ListItemText primary={item.name} />
+              <ListItemText primary={t(MENU_I18N_KEYS[item.path] ?? "menu.unknown", { defaultValue: item.name })} />
               {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
             </ListItemButton>
           </ListItem>
@@ -145,7 +155,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
                   value={tab.id}
                   label={
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <span>{tab.label}</span>
+                      <span>{t(MENU_I18N_KEYS[tab.path] ?? "menu.unknown", { defaultValue: tab.label ?? tab.path })}</span>
                       <Close sx={{ fontSize: 16, ml: 1, "&:hover": { bgcolor: "action.hover" }, borderRadius: "50%", p: 0.5, cursor: "pointer" }} onClick={(event) => handleCloseTab(tab.id, event)} />
                     </Box>
                   }

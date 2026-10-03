@@ -3,7 +3,7 @@ export interface DashboardResponse {
     tapeRows: TapeRow[];
     indexRows: IndexRow[];
     etfRows: EtfRow[];
-    alerts: string[];
+    alerts: MessageItem[];
     events: EventItem[];
     signalRows: SignalRow[];
     fearGreedComponents: FearGreedComponent[];
@@ -25,12 +25,12 @@ export interface DashboardResponse {
   }
   
   export interface IndexRow {
-    name: string;
+    nameCode: string;
     symbol: string;
     value: string;
     day: string;
     trend: string;
-    note: string;
+    noteCode: string;
   }
   
   export interface EtfRow {
@@ -38,40 +38,45 @@ export interface DashboardResponse {
     price: string;
     day: string;
     rsi: string;
-    bias: string;
+    biasCode: string;
     ma20Deviation: string;
     volumeRatio5d: string;
-    note: string;
-    source: string;
+    noteCode: string;
+    sourceCode: string;
     time: string;
   }
   
   export interface EventItem {
-    name: string;
+    nameCode: string;
     time: string;
-    level: string;
+    levelCode: string;
   }
   
   export interface SignalRow {
-    name: string;
+    code: "FEAR_GREED" | "VIX" | "PUT_CALL" | "MARKET_BREADTH";
     value: string;
-    status: string;
-    source: string;
+    statusCode: string;
+    sourceCode: string;
   }
   
   export interface FearGreedComponent {
-    name: string;
+    code: string;
     value: string;
-    desc: string;
+    statusCode: string;
   }
   
   export interface MarketSummary {
-    title: string;
-    description: string;
-    tag: string;
+    titleCode: string;
+    description: MessageItem;
+    tag: MessageItem;
   }
   
   export interface ExecutionBias {
-    title: string;
-    description: string;
+    titleCode: string;
+    descriptionCode: string;
+  }
+
+  export interface MessageItem {
+    code: string;
+    params: Record<string, string | number>;
   }
