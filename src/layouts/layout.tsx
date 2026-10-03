@@ -127,7 +127,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
               sx={{
                 minHeight: 44,
                 pl: 1.5 + level * 2,
-                borderRadius: 2.5,
+                borderRadius: 1,
                 color: "rgba(226,232,240,.78)",
                 "& .MuiListItemIcon-root": { color: "rgba(148,163,184,.9)" },
                 "&:hover": { bgcolor: "rgba(255,255,255,.07)", color: "#fff" },
@@ -168,7 +168,7 @@ const Layout: React.FC<LayoutProps> = ({ menuData }) => {
         </Box>
         <Typography sx={{ px: 2.5, pt: 2.5, pb: 1, fontSize: 10, fontWeight: 800, letterSpacing: ".12em", color: "#64748B" }}>{t("shell.navigation")}</Typography>
         <List sx={{ flexGrow: 1, overflow: "auto", py: 0.5 }}>{renderMenu(menuData)}</List>
-        <Box sx={{ m: 1.5, p: 1.5, borderRadius: 2.5, bgcolor: "rgba(255,255,255,.045)", border: "1px solid rgba(148,163,184,.1)" }}>
+        <Box sx={{ m: 1.5, p: 1.5, borderRadius: 1, bgcolor: "rgba(255,255,255,.045)", border: "1px solid rgba(148,163,184,.1)" }}>
           <Typography sx={{ fontSize: 11, color: "#64748B" }}>{t("shell.workspace")}</Typography>
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#CBD5E1", mt: 0.35 }}>{t("shell.usMarket")}</Typography>
         </Box>

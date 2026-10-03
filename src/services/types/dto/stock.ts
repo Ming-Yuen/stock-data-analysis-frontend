@@ -14,6 +14,11 @@ export interface StockSnapshot {
   peg: number;
   rsi: number;
   cashPerShare: number;
+  fundamentalDate?: string;
+  fundamentalUpdatedAt?: string;
+  industry?: string;
+  category?: string;
+  subCategory?: string;
 }
 
 // export interface StockClassification {

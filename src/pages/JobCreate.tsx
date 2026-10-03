@@ -6,19 +6,19 @@ import { Save, Cancel } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { useMutate } from "../hooks/api/useApi";
 import { ApiResponse } from "../services/types/dto/apiResponse";
-import { TaskGroup } from "../services/types/dto/batch";
+import { Job, TaskGroup } from "../services/types/dto/batch";
 import { ActiveStatus } from "../services/types/enums/ActiveStatus";
 import { MenuTree } from "../services/types/dto/menu";
 
 interface JobCreatePageProps {
   menuTree: MenuTree;
+  job?: Job;
   onClose?: () => void;
 }
 
 interface CronSchedule {
   selectedDays: number[];
-  startDate: string;
-  startTime: string;
+  startDateTime: string;
   frequency: "daily" | "weekly" | "monthly";
   endDate?: string;
 }
@@ -50,7 +50,34 @@ const FormField = ({ label, required = false, error, children }: { label: string
   </Box>
 );
 
-export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
+const scheduleFromJob = (job?: Job): CronSchedule => {
+  const parts = job?.cronExpression?.trim().split(/\s+/) ?? [];
+  const dayOfMonth = parts[3];
+  const dayOfWeek = parts[5];
+  const frequency: CronSchedule["frequency"] =
+    dayOfWeek && dayOfWeek !== "?" && dayOfWeek !== "*"
+      ? "weekly"
+      : dayOfMonth === "1"
+        ? "monthly"
+        : "daily";
+  const selectedDays = frequency === "weekly"
+    ? dayOfWeek.split(",").map(Number).map((day) => day === 1 ? 0 : day - 1)
+    : [];
+
+  const cronTime = parts.length >= 3
+    ? `${String(parts[2]).padStart(2, "0")}:${String(parts[1]).padStart(2, "0")}`
+    : "12:00";
+
+  return {
+    selectedDays,
+    startDateTime: job?.startTime?.slice(0, 16) ?? `${new Date().toISOString().slice(0, 10)}T${cronTime}`,
+    frequency,
+    endDate: job?.endTime?.slice(0, 10) ?? "",
+  };
+};
+
+export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
+  const isEditing = Boolean(job);
   // ✅ 使用環境變數配置 API endpoint
   const createJob = useMutate<ApiResponse>({
     url: `${process.env.REACT_APP_API_BASE_URL}/job/update`,
@@ -65,38 +92,30 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
     setValue,
   } = useForm<JobFormData>({
     defaultValues: {
-      jobName: "",
-      taskGroup: "",
-      taskDescription: "",
-      jobParams: "{}",
-      jobClassPath: "",
-      cronSchedule: {
-        selectedDays: [],
-        startDate: "",
-        startTime: "12:00", // ✅ 改成預設中午 12:00
-        frequency: "daily",
-      },
-      activeStatus: ActiveStatus.ACTIVE,
+      jobName: job?.jobName ?? "",
+      taskGroup: job?.taskGroup ?? "",
+      taskDescription: job?.taskDescription ?? "",
+      jobParams: JSON.stringify(job?.jobParams ?? {}, null, 2),
+      jobClassPath: job?.jobClassPath ?? "",
+      cronSchedule: scheduleFromJob(job),
+      activeStatus: job?.activeStatus ?? ActiveStatus.ACTIVE,
     },
   });
 
   const frequency = watch("cronSchedule.frequency");
-  const cronSchedule = watch("cronSchedule");
   const selectedDays = watch("cronSchedule.selectedDays");
 
   const taskGroupOptions: { label: string; value: TaskGroup }[] = [
     // 可以重新啟用這些選項
-    { label: "STOCK", value: "STOCK" },
-    { label: "STOCK_SCHEDULE", value: "STOCK_SCHEDULE" },
-    { label: "STOCK_REPORT", value: "STOCK_REPORT" },
-    { label: "REPORT_SCHEDULE", value: "REPORT_SCHEDULE" },
-    { label: "MAINTENANCE_SCHEDULE", value: "MAINTENANCE_SCHEDULE" },
-    { label: "DEFAULT", value: "DEFAULT" },
+    { label: "SCHEDULE", value: "SCHEDULE" },
+    { label: "BATCH", value: "BATCH" },
+    { label: "REPORT", value: "REPORT" },
   ];
 
   const generateCronExpression = (schedule: CronSchedule): string => {
-    if (!schedule.startDate || !schedule.startTime) return "";
-    const [hours, minutes] = schedule.startTime.split(":").map(Number);
+    if (!schedule.startDateTime) return "";
+    const [, time = ""] = schedule.startDateTime.split("T");
+    const [hours, minutes] = time.split(":").map(Number);
     if (schedule.frequency === "daily") return `0 ${minutes} ${hours} * * ?`;
     if (schedule.frequency === "weekly") {
       if (schedule.selectedDays.length === 0) return "";
@@ -120,11 +139,8 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
       // 解析 Job Params JSON
       const jobParams = data.jobParams.trim() ? JSON.parse(data.jobParams) : {};
 
-      // 生成 Cron 表達式並加入 jobParams
+      // Generate the persisted Quartz cron expression.
       const cronExpression = generateCronExpression(data.cronSchedule);
-      if (cronExpression) {
-        jobParams.cronExpression = cronExpression;
-      }
 
       // ✅ 組裝 POST body
       const submitData = {
@@ -133,6 +149,11 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
         taskDescription: data.taskDescription, // ✅ 加上 description
         jobClassPath: data.jobClassPath,
         jobParams: jobParams,
+        cronExpression,
+        startTime: data.cronSchedule.startDateTime
+          ? `${data.cronSchedule.startDateTime}:00`
+          : null,
+        endTime: data.cronSchedule.endDate ? `${data.cronSchedule.endDate}T23:59:59` : null,
         activeStatus: data.activeStatus,
       };
 
@@ -161,16 +182,16 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
   return (
     <Box sx={{ width: "100%", mx: "auto" }}>
       <Typography variant="h5" gutterBottom>
-        Create Job
+        {isEditing ? "Edit Job" : "Create Job"}
       </Typography>
       {createJob.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          Creation failed, please try again later
+          Save failed, please try again later
         </Alert>
       )}
       {createJob.isSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Job created successfully!
+          Job saved successfully!
         </Alert>
       )}
 
@@ -208,7 +229,7 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
             {/* Task Name */}
             <Grid size={{ xs: 12, md: 4 }}>
               <FormField label="Task Name" required error={errors.jobName?.message}>
-                <Controller name="jobName" control={control} rules={{ required: "Task name cannot be empty" }} render={({ field }) => <TextField {...field} error={!!errors.jobName} size="small" fullWidth placeholder="Please enter task name" />} />
+                <Controller name="jobName" control={control} rules={{ required: "Task name cannot be empty" }} render={({ field }) => <TextField {...field} disabled={isEditing} error={!!errors.jobName} size="small" fullWidth placeholder="Please enter task name" />} />
               </FormField>
             </Grid>
 
@@ -276,7 +297,7 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
             </Grid>
 
             {/* Frequency */}
-            <Grid size={{ xs: 12, md: 3 }}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <FormField label="Frequency" required error={errors.cronSchedule?.frequency?.message}>
                 <Controller
                   name="cronSchedule.frequency"
@@ -302,22 +323,15 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
               </FormField>
             </Grid>
 
-            {/* Start Date */}
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormField label="Start Date" required error={errors.cronSchedule?.startDate?.message}>
-                <Controller name="cronSchedule.startDate" control={control} rules={{ required: "Please select start date" }} render={({ field }) => <TextField {...field} type="date" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.startDate} />} />
-              </FormField>
-            </Grid>
-
-            {/* Start Time */}
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormField label="Start Time" required error={errors.cronSchedule?.startTime?.message}>
-                <Controller name="cronSchedule.startTime" control={control} rules={{ required: "Please select start time" }} render={({ field }) => <TextField {...field} type="time" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.startTime} />} />
+            {/* Start Date Time */}
+            <Grid size={{ xs: 12, md: 4 }}>
+              <FormField label="Start Date Time" required error={errors.cronSchedule?.startDateTime?.message}>
+                <Controller name="cronSchedule.startDateTime" control={control} rules={{ required: "Please select start date and time" }} render={({ field }) => <TextField {...field} type="datetime-local" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.startDateTime} />} />
               </FormField>
             </Grid>
 
             {/* End Date */}
-            <Grid size={{ xs: 12, md: 3 }}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <FormField label="End Date (Optional)">
                 <Controller name="cronSchedule.endDate" control={control} render={({ field }) => <TextField {...field} type="date" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth />} />
               </FormField>
@@ -350,22 +364,6 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
               </Grid>
             )}
 
-            {/* Cron Expression */}
-            {generateCronExpression(cronSchedule) && (
-              <Grid size={12}>
-                <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 100, pt: 0.5 }}>
-                    Cron Expression
-                  </Typography>
-                  <Box sx={{ p: 1.5, bgcolor: "#f5f5f5", borderRadius: 1, flex: 1 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      <strong>{generateCronExpression(cronSchedule)}</strong>
-                    </Typography>
-                  </Box>
-                </Box>
-              </Grid>
-            )}
-
             {/* Buttons */}
             <Grid size={12}>
               <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", pt: 2, borderTop: "1px solid #e0e0e0" }}>
@@ -373,7 +371,7 @@ export function JobCreatePage({ menuTree, onClose }: JobCreatePageProps) {
                   Cancel
                 </Button>
                 <Button type="submit" variant="contained" color="primary" startIcon={<Save />} disabled={createJob.isPending}>
-                  {createJob.isPending ? "Creating..." : "Create"}
+                  {createJob.isPending ? "Saving..." : "Save"}
                 </Button>
               </Box>
             </Grid>

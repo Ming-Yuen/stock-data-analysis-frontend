@@ -30,13 +30,13 @@ export interface DynamicFormTableProps {
   error?: Error | null;
   hasMore?: boolean;
   onLoadMore?: () => void;
-  title?: string;
   maxHeight?: number | string;
   enableInfiniteScroll?: boolean;
   extraRenderProps?: any;
   pageKey: string;
   toolbarActions?: React.ReactNode;
   onSearch?: (criteria: Record<string, any>) => void;
+  onRowDoubleClick?: (row: Record<string, any>) => void;
 
   // 搜尋欄位變更時通知父層（做分類聯動）
   onSearchFieldChange?: (

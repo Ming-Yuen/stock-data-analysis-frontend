@@ -84,6 +84,7 @@ interface JobManagementPageProps {
 
 export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   const [showCreatePage, setShowCreatePage] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [allData, setAllData] = useState<Job[]>([]);
@@ -93,11 +94,13 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   const launchBatchJob = useMutate<ApiResponse>(apiConfig.launchJobList);
 
   const handleCreateClick = () => {
+    setSelectedJob(null);
     setShowCreatePage(true);
   };
 
   const handleCreateClose = () => {
     setShowCreatePage(false);
+    setSelectedJob(null);
     setPage(1);
   };
 
@@ -130,7 +133,7 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   }, [isLoading, hasMore]);
 
   if (showCreatePage) {
-    return <JobCreatePage menuTree={menuTree} onClose={handleCreateClose} />;
+    return <JobCreatePage menuTree={menuTree} job={selectedJob ?? undefined} onClose={handleCreateClose} />;
   }
 
   return (
@@ -145,7 +148,6 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
     >
       <DynamicFormTable
         pageKey={menuTree.name}
-        title={menuTree.name}
         columns={columns}
         data={allData}
         loading={isLoading}
@@ -154,6 +156,10 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
         onLoadMore={handleLoadMore}
         enableInfiniteScroll={true}
         extraRenderProps={{ launchBatchJob }}
+        onRowDoubleClick={(row) => {
+          setSelectedJob(row as Job);
+          setShowCreatePage(true);
+        }}
         toolbarActions={
           // 這裡可以放多個按鈕，用 Stack/Box 包起來
           <Stack direction="row" spacing={1}>

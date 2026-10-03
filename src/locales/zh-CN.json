@@ -473,7 +473,7 @@
       "loading":"正在加载仪表板……","loadError":"无法加载仪表板","updatedAt":"更新时间","marketDate":"市场日期","dataSource":"数据来源","sourceLabel":"来源","currentAssessment":"当前判断","indexValue":"指数值：{{value}}","etfSubtitle":"加入均线偏离与量能确认",
       "section":{"marketStatus":"市场状态","indexObservation":"指数层观察","fearGreedFactors":"贪婪恐慌七因子","etfObservation":"ETF 观察列表","priceVolumeRules":"量价判断规则","signalMatrix":"信号矩阵","riskAlerts":"风险规则提醒","upcoming":"即将发生"},
       "source":{"INTERNAL_MARKET_SNAPSHOT":"内部行情快照","CNN_FEAR_GREED":"CNN 贪婪恐慌指数","US_TREASURY":"美国财政部","CNN":"CNN","CNN_SENTIMENT_FACTOR":"CNN 情绪因子"},
-      "signal":{"FEAR_GREED":"贪婪恐慌指数","VIX":"VIX","PUT_CALL":"Put / Call","MARKET_BREADTH":"市场广度"},
+      "signal":{"FEAR_GREED":"贪婪恐慌指数","CNN_VIX_SCORE":"CNN VIX 情绪分数","CNN_PUT_CALL_SCORE":"CNN Put/Call 情绪分数","CNN_MARKET_BREADTH_SCORE":"CNN 市场广度情绪分数"},
       "sentiment":{"INSUFFICIENT_DATA":"数据不足","EXTREME_FEAR":"极度恐慌","FEAR":"恐慌","NEUTRAL":"中性","GREED":"贪婪","EXTREME_GREED":"极度贪婪"},
       "index":{"SP500":"标普500","NASDAQ100":"纳指100","PHLX_SEMICONDUCTOR":"费半指数","RUSSELL2000":"罗素2000"},
       "indexNote":{"UP":"当日上涨","DOWN":"当日下跌","FLAT":"当日持平"},
@@ -485,6 +485,7 @@
       "messages":{"ETF_OVERHEATED":"{{ticker}}：RSI {{rsi}} 且高于20日均线 {{deviation}}，短线处于过热区。","ETF_OVERSOLD":"{{ticker}}：RSI {{rsi}}，短线动能偏弱并进入超卖观察区。","ETF_VOLUME_CONFIRMED":"{{ticker}}：价格上涨且量比达 {{volumeRatio}}，升势获成交量确认。","ETF_LOW_VOLUME_EXTENSION":"{{ticker}}：高于20日均线 {{deviation}}，但量比仅 {{volumeRatio}}，需留意缩量追高风险。","EXTREME_GREED":"CNN 贪婪恐慌指数为 {{score}}，市场情绪进入极度贪婪区。","EXTREME_FEAR":"CNN 贪婪恐慌指数为 {{score}}，市场情绪进入极度恐慌区。","NO_ALERTS":"目前未触发过热、超卖、放量上涨或缩量追高警示。","SUMMARY_WITH_SENTIMENT":"CNN 贪婪恐慌指数为 {{score}}；观察 ETF 中有 {{up}} 个上涨、{{down}} 个下跌。","SUMMARY_WITHOUT_SENTIMENT":"CNN 情绪数据不足；观察 ETF 中有 {{up}} 个上涨、{{down}} 个下跌。","DATE_UNAVAILABLE":"数据日期不足","MARKET_CLOSE":"{{date}} 收盘"},
       "marketSummary":{"STRONG_BUT_OVERHEATED":"风险偏好偏强，但情绪已过热","HOT_BUT_DIVERGING":"情绪偏热，但价格动能出现分化","FEAR_WITH_RECOVERY":"恐慌情绪下出现价格修复","WEAK_AND_FEARFUL":"风险偏好偏弱，市场处于恐慌区","BULLISH_NON_EXTREME":"市场动能偏多，情绪尚未进入极端区","BEARISH":"市场动能偏弱，宜控制下行风险","DIVERGING":"市场方向分化，等待更明确信号"},
       "execution":{"EXECUTION_BIAS":"执行倾向","HIGH_RISK":"多项风险条件同时成立，宜降低追价与高波动部位，等待 RSI、均线偏离或量能恢复正常。","SELECTIVE":"部分风险条件已触发，维持选择性部署，新增部位应优先确认量能及均线偏离。","BULLISH":"ETF 动能整体偏多且未触发主要风险条件，可维持偏多思路并设置风险边界。","DEFENSIVE":"ETF 动能整体偏弱且未见明确反转确认，宜保守控制仓位并等待放量回升。","NEUTRAL":"当前数据不足或方向分化，宜维持中性仓位并等待更明确的量价信号。"},
-      "eventLevel":{"HIGH":"高","MEDIUM":"中","LOW":"低"},"event":{}
+      "hongKongTime":"香港时间","noUpcomingEvents":"未来 14 天暂无已确认的市场催化事件。","eventCategory":{"MACRO":"宏观","FED":"美联储","EARNINGS":"财报","TREASURY":"美债","DERIVATIVES":"衍生品","INDEX_REBALANCE":"指数调整","POLICY":"政策","OTHER":"其他"},
+      "eventLevel":{"HIGH":"高","MEDIUM":"中","LOW":"低"},"event":{"CPI":"消费者价格指数（CPI）","CORE_CPI":"核心消费者价格指数","PCE":"个人消费支出价格指数（PCE）","CORE_PCE":"核心 PCE 价格指数","EMPLOYMENT_SITUATION":"就业报告（非农及失业率）","NONFARM_PAYROLLS":"非农就业数据","NFP":"非农就业数据","UNEMPLOYMENT_RATE":"失业率","INITIAL_JOBLESS_CLAIMS":"首次申请失业救济人数","JOBLESS_CLAIMS":"首次申请失业救济人数","FACTORY_ORDERS":"工厂订单","JOLTS":"JOLTS 职位空缺","ISM_MANUFACTURING":"ISM 制造业 PMI","ISM_SERVICES":"ISM 服务业 PMI","GDP":"国内生产总值（GDP）","RETAIL_SALES":"零售销售","PPI":"生产者价格指数（PPI）","FOMC":"FOMC 利率决议","EARNINGS_REPORT":"{{symbol}} 财报发布","MONTHLY_OPEX":"月度期权到期日","QUARTERLY_OPEX":"季度期权到期日（三巫日）"}
     }
   }

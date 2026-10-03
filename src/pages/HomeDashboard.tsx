@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Paper, Typography, Stack, Divider, Chip } from "@mui/material";
+import { Box, Paper, Typography, Stack, Divider, Chip, Link } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
   WarningAmber,
@@ -39,14 +39,14 @@ const getVolumeRatioColor = (value: string) => {
 };
 
 const HomeDashboard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data, isLoading, isError, error } = useFetch<DashboardResponse>(apiConfig.overview_dashboard, {});
 
   if (isLoading) {
     return (
       <Paper
         elevation={0}
-        sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+        sx={{ p: 3, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
       >
         <Typography sx={{ fontSize: 14, color: "text.secondary" }}>{t("dashboard.loading")}</Typography>
       </Paper>
@@ -57,7 +57,7 @@ const HomeDashboard: React.FC = () => {
     return (
       <Paper
         elevation={0}
-        sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+        sx={{ p: 3, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
       >
         <Typography sx={{ fontSize: 14, color: "error.main" }}>
           {t("dashboard.loadError")}{error instanceof Error ? `: ${error.message}` : ""}
@@ -80,9 +80,9 @@ const HomeDashboard: React.FC = () => {
   } = data;
 
   const fearGreedSignal = signalRows.find((item) => item.code === "FEAR_GREED");
-  const vixSignal = signalRows.find((item) => item.code === "VIX");
-  const putCallSignal = signalRows.find((item) => item.code === "PUT_CALL");
-  const breadthSignal = signalRows.find((item) => item.code === "MARKET_BREADTH");
+  const cnnVixScore = signalRows.find((item) => item.code === "CNN_VIX_SCORE");
+  const cnnPutCallScore = signalRows.find((item) => item.code === "CNN_PUT_CALL_SCORE");
+  const cnnMarketBreadthScore = signalRows.find((item) => item.code === "CNN_MARKET_BREADTH_SCORE");
   const translateMessage = (message: { code: string; params: Record<string, string | number> }) =>
     t(`dashboard.messages.${message.code}`, message.params);
 
@@ -90,7 +90,7 @@ const HomeDashboard: React.FC = () => {
     <Stack spacing={2}>
       <Paper
         elevation={0}
-        sx={{ px: 2, py: 1.25, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+        sx={{ px: 2, py: 1.25, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
       >
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} justifyContent="space-between">
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -114,7 +114,7 @@ const HomeDashboard: React.FC = () => {
         sx={{
           px: 2,
           py: 1.25,
-          borderRadius: 2,
+          borderRadius: 1,
           bgcolor: "background.paper",
           border: 1,
           borderColor: "divider",
@@ -145,7 +145,7 @@ const HomeDashboard: React.FC = () => {
           <Stack spacing={2}>
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Box
                 sx={{
@@ -192,39 +192,39 @@ const HomeDashboard: React.FC = () => {
               </Grid>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <MetricCard
-                  title={t("dashboard.signal.VIX")}
-                  value={vixSignal?.value ?? "--"}
-                  status={vixSignal ? t(`dashboard.sentiment.${vixSignal.statusCode}`) : "--"}
+                  title={t("dashboard.signal.CNN_VIX_SCORE")}
+                  value={cnnVixScore?.value ?? "--"}
+                  status={cnnVixScore ? t(`dashboard.sentiment.${cnnVixScore.statusCode}`) : "--"}
                   trend="down"
                   change=""
-                  subtitle={`${t("dashboard.sourceLabel")}：${vixSignal ? t(`dashboard.source.${vixSignal.sourceCode}`) : "--"}`}
+                  subtitle={`${t("dashboard.sourceLabel")}：${cnnVixScore ? t(`dashboard.source.${cnnVixScore.sourceCode}`) : "--"}`}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <MetricCard
-                  title={t("dashboard.signal.PUT_CALL")}
-                  value={putCallSignal?.value ?? "--"}
-                  status={putCallSignal ? t(`dashboard.sentiment.${putCallSignal.statusCode}`) : "--"}
+                  title={t("dashboard.signal.CNN_PUT_CALL_SCORE")}
+                  value={cnnPutCallScore?.value ?? "--"}
+                  status={cnnPutCallScore ? t(`dashboard.sentiment.${cnnPutCallScore.statusCode}`) : "--"}
                   trend="neutral"
                   change=""
-                  subtitle={`${t("dashboard.sourceLabel")}：${putCallSignal ? t(`dashboard.source.${putCallSignal.sourceCode}`) : "--"}`}
+                  subtitle={`${t("dashboard.sourceLabel")}：${cnnPutCallScore ? t(`dashboard.source.${cnnPutCallScore.sourceCode}`) : "--"}`}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                 <MetricCard
-                  title={t("dashboard.signal.MARKET_BREADTH")}
-                  value={breadthSignal?.value ?? "--"}
-                  status={breadthSignal ? t(`dashboard.sentiment.${breadthSignal.statusCode}`) : "--"}
+                  title={t("dashboard.signal.CNN_MARKET_BREADTH_SCORE")}
+                  value={cnnMarketBreadthScore?.value ?? "--"}
+                  status={cnnMarketBreadthScore ? t(`dashboard.sentiment.${cnnMarketBreadthScore.statusCode}`) : "--"}
                   trend="up"
                   change=""
-                  subtitle={`${t("dashboard.sourceLabel")}：${breadthSignal ? t(`dashboard.source.${breadthSignal.sourceCode}`) : "--"}`}
+                  subtitle={`${t("dashboard.sourceLabel")}：${cnnMarketBreadthScore ? t(`dashboard.source.${cnnMarketBreadthScore.sourceCode}`) : "--"}`}
                 />
               </Grid>
             </Grid>
 
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <ShowChart fontSize="small" />
@@ -233,7 +233,7 @@ const HomeDashboard: React.FC = () => {
               <Grid container spacing={1.2}>
                 {indexRows.map((item) => (
                   <Grid key={item.symbol} size={{ xs: 12, sm: 6 }}>
-                    <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
+                    <Box sx={{ p: 1.5, borderRadius: 0.75, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
                       <Stack spacing={0.6}>
                         <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
                           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
@@ -254,7 +254,7 @@ const HomeDashboard: React.FC = () => {
 
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <InfoOutlined fontSize="small" />
@@ -266,7 +266,7 @@ const HomeDashboard: React.FC = () => {
                     <Box
                       sx={{
                         p: 1.5,
-                        borderRadius: 1.5,
+                        borderRadius: 0.75,
                         bgcolor: "background.default",
                         border: 1,
                         borderColor: "divider",
@@ -290,7 +290,7 @@ const HomeDashboard: React.FC = () => {
 
             <Paper
               elevation={0}
-              sx={{ borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider", overflow: "hidden" }}
+              sx={{ borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider", overflow: "hidden" }}
             >
               <Box
                 sx={{
@@ -405,14 +405,14 @@ const HomeDashboard: React.FC = () => {
 
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary", mb: 1.5 }}>
                 {t("dashboard.section.priceVolumeRules")}
               </Typography>
               <Grid container spacing={1.2}>
                 <Grid size={{ xs: 12, md: 4 }}>
-                  <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
+                  <Box sx={{ p: 1.5, borderRadius: 0.75, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
                     <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>{t("dashboard.rules.maTitle")}</Typography>
                     <Typography sx={{ fontSize: 12, lineHeight: 1.55, color: "text.secondary" }}>
                       {t("dashboard.rules.maDescription")}
@@ -420,7 +420,7 @@ const HomeDashboard: React.FC = () => {
                   </Box>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
-                  <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
+                  <Box sx={{ p: 1.5, borderRadius: 0.75, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
                     <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>{t("dashboard.rules.volumeTitle")}</Typography>
                     <Typography sx={{ fontSize: 12, lineHeight: 1.55, color: "text.secondary" }}>
                       {t("dashboard.rules.volumeDescription")}
@@ -428,7 +428,7 @@ const HomeDashboard: React.FC = () => {
                   </Box>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
-                  <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
+                  <Box sx={{ p: 1.5, borderRadius: 0.75, bgcolor: "background.default", border: 1, borderColor: "divider", height: "100%" }}>
                     <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.8 }}>{t("dashboard.rules.combinationTitle")}</Typography>
                     <Typography sx={{ fontSize: 12, lineHeight: 1.55, color: "text.secondary" }}>
                       {t("dashboard.rules.combinationDescription")}
@@ -440,13 +440,13 @@ const HomeDashboard: React.FC = () => {
 
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary", mb: 1.5 }}>{t("dashboard.section.signalMatrix")}</Typography>
               <Grid container spacing={1.2}>
                 {signalRows.map((item) => (
                   <Grid key={item.code} size={{ xs: 12, sm: 6, md: 4 }}>
-                    <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
+                    <Box sx={{ p: 1.5, borderRadius: 0.75, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
                       <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 0.4 }}>{t(`dashboard.signal.${item.code}`)}</Typography>
                       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
                         <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary" }}>{item.value}</Typography>
@@ -467,7 +467,7 @@ const HomeDashboard: React.FC = () => {
           <Stack spacing={2}>
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <WarningAmber fontSize="small" />
@@ -475,7 +475,7 @@ const HomeDashboard: React.FC = () => {
               </Box>
               <Stack spacing={1.2}>
                 {alerts.map((item, index) => (
-                  <Box key={index} sx={{ p: 1.25, borderRadius: 1.5, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
+                  <Box key={index} sx={{ p: 1.25, borderRadius: 0.75, bgcolor: "background.default", border: 1, borderColor: "divider" }}>
                     <Typography sx={{ fontSize: 13, lineHeight: 1.45, color: "text.primary" }}>{translateMessage(item)}</Typography>
                   </Box>
                 ))}
@@ -484,7 +484,7 @@ const HomeDashboard: React.FC = () => {
 
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
                 <EventNote fontSize="small" />
@@ -493,32 +493,67 @@ const HomeDashboard: React.FC = () => {
               <Stack spacing={1.2}>
                 {events.map((item) => (
                   <Box
-                    key={`${item.nameCode}-${item.time}`}
+                    key={item.id}
                     sx={{
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "flex-start",
                       gap: 1,
                       p: 1.2,
-                      borderRadius: 1.5,
+                      borderRadius: 0.75,
                       bgcolor: "background.default",
                       border: 1,
                       borderColor: "divider",
                     }}
                   >
-                    <Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>{t(`dashboard.event.${item.nameCode}`)}</Typography>
-                      <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.3 }}>{item.time}</Typography>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+                        <Chip
+                          label={t(`dashboard.eventCategory.${item.categoryCode}`, { defaultValue: item.categoryCode })}
+                          size="small"
+                          sx={{ height: 20, fontSize: 10 }}
+                        />
+                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>
+                          {item.titleCode
+                            ? t(`dashboard.event.${item.titleCode}`, {
+                                defaultValue: item.title ?? item.titleCode,
+                                symbol: item.symbol,
+                              })
+                            : item.title}
+                        </Typography>
+                      </Box>
+                      <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.5 }}>
+                        {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+                          dateStyle: "medium",
+                          timeStyle: item.allDay ? undefined : "short",
+                          timeZone: "Asia/Hong_Kong",
+                        }).format(new Date(item.startsAt))}
+                        {!item.allDay && ` · ${t("dashboard.hongKongTime")}`}
+                      </Typography>
+                      {item.source && (
+                        <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.4 }}>
+                          {t("dashboard.sourceLabel")}：{item.sourceUrl ? (
+                            <Link href={item.sourceUrl} target="_blank" rel="noreferrer" underline="hover">
+                              {item.source}
+                            </Link>
+                          ) : item.source}
+                        </Typography>
+                      )}
                     </Box>
                     <Chip label={t(`dashboard.eventLevel.${item.levelCode}`)} size="small" color={getEventColor(item.levelCode)} variant="outlined" />
                   </Box>
                 ))}
+                {events.length === 0 && (
+                  <Typography sx={{ py: 2, fontSize: 12, color: "text.secondary", textAlign: "center" }}>
+                    {t("dashboard.noUpcomingEvents")}
+                  </Typography>
+                )}
               </Stack>
             </Paper>
 
             <Paper
               elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
+              sx={{ p: 2, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider" }}
             >
               <Typography sx={{ fontSize: 16, fontWeight: 700, color: "text.primary", mb: 1 }}>
                 {t(`dashboard.execution.${executionBias.titleCode}`)}

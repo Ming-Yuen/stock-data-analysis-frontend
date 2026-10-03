@@ -11,12 +11,17 @@ export interface EnquiryJobRequest extends Record<string, unknown> {
   pageSize?: number;
 }
 
-export type TaskGroup = "STOCK" | "STOCK_SCHEDULE" | "STOCK_REPORT" | "REPORT_SCHEDULE" | "MAINTENANCE_SCHEDULE" | "DEFAULT";
+export type TaskGroup = "TEMP" | "SCHEDULE" | "BATCH" | "REPORT";
 
 export interface Job {
   jobName: string;
   taskGroup: TaskGroup;
   jobParams: { [key: string]: any };
+  taskDescription: string;
+  jobClassPath: string;
+  cronExpression: string;
+  startTime?: string;
+  endTime?: string;
   activeStatus: ActiveStatus;
   lastExecutionStatus: string;
   lastExecutionTime: string;

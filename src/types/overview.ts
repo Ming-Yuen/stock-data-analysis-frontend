@@ -47,13 +47,21 @@ export interface DashboardResponse {
   }
   
   export interface EventItem {
-    nameCode: string;
-    time: string;
+    id: string;
+    title: string | null;
+    titleCode: string | null;
+    categoryCode: string;
+    startsAt: string;
     levelCode: string;
+    symbol: string | null;
+    source: string | null;
+    sourceUrl: string | null;
+    statusCode: string;
+    allDay: boolean;
   }
   
   export interface SignalRow {
-    code: "FEAR_GREED" | "VIX" | "PUT_CALL" | "MARKET_BREADTH";
+    code: "FEAR_GREED" | "CNN_VIX_SCORE" | "CNN_PUT_CALL_SCORE" | "CNN_MARKET_BREADTH_SCORE";
     value: string;
     statusCode: string;
     sourceCode: string;

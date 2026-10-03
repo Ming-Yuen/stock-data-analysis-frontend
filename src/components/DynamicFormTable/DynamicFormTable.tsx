@@ -68,10 +68,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
   enableInfiniteScroll = true,
   extraRenderProps,
   pageKey,
-  title,
   toolbarActions,
   onSearch,
   onSearchFieldChange,
+  onRowDoubleClick,
 }) => {
   const { t } = useTranslation();
   const useExternalData = externalData !== undefined;
@@ -84,8 +84,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
   const [disabledSearchFields, setDisabledSearchFields] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [localDisabledFields, setLocalDisabledFields] = useState<string[]>([]);
-  const [searchPanelHeight, setSearchPanelHeight] = useState<number>(180);
-  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     if (useExternalData && externalData) {
@@ -383,38 +381,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     }
     setSettingsOpen(false);
   };
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsResizing(true);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isResizing) return;
-    const delta = e.movementY;
-    setSearchPanelHeight((prev) => {
-      const next = prev + delta;
-      return Math.min(Math.max(next, 80), 320);
-    });
-  };
-
-  const handleMouseUp = () => {
-    if (isResizing) setIsResizing(false);
-  };
-
-  useEffect(() => {
-    if (isResizing) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    } else {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing]);
 
   const buildCriteria = useCallback((values: SearchValuesState) => {
     const criteria: Record<string, any> = {};
@@ -733,16 +699,12 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         sx={{
           mb: 2,
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "center",
           gap: 2,
           flexWrap: "wrap",
         }}
       >
-        <Box>
-          <Typography sx={{ fontSize: 24, fontWeight: 800, color: "text.primary", letterSpacing: "-.02em" }}>{title}</Typography>
-          <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.35 }}>{t("table.workspaceSubtitle")}</Typography>
-        </Box>
         <Stack direction="row" spacing={1} alignItems="center">
           <Button variant="outlined" size="small" onClick={handleClearAllSearch}>
             Clear
@@ -763,12 +725,12 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         </Alert>
       )}
 
-      <Paper elevation={0} sx={{ mb: 2, p: searchRows.length ? 2 : 0, borderRadius: 3, border: searchRows.length ? 1 : 0, borderColor: "divider", bgcolor: "background.paper" }}>
+      <Paper elevation={0} sx={{ mb: 2, p: searchRows.length ? 2 : 0, borderRadius: 1, border: searchRows.length ? 1 : 0, borderColor: "divider", bgcolor: "background.paper" }}>
         {!criteriaLoading && (
           <Box
             sx={{
               flex: 1,
-              height: searchPanelHeight,
+              maxHeight: 180,
               overflowY: "auto",
               pr: 1,
             }}
@@ -811,26 +773,13 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         )}
       </Paper>
 
-      <Box
-        onMouseDown={handleMouseDown}
-        sx={{
-          height: 6,
-          cursor: "row-resize",
-          bgcolor: "divider",
-          mb: 2,
-          borderRadius: 3,
-          opacity: 0.7,
-          "&:hover": { bgcolor: "primary.light", opacity: 1 },
-        }}
-      />
-
       <TableContainer
         component={Paper}
         sx={{
           boxShadow: "none",
           border: 1,
           borderColor: "divider",
-          borderRadius: 3,
+          borderRadius: 1,
           backgroundColor: "background.paper",
           maxHeight: maxHeight ?? "none",
           overflow: "auto",
@@ -870,7 +819,15 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
               <TableRow
                 key={rowIndex}
                 ref={rowIndex === filteredData.length - 1 ? lastElementRef : null}
-                sx={{ transition: "background-color .15s ease", "&:hover": { backgroundColor: "#F8FAFC" } }}
+                onDoubleClick={(event) => {
+                  if ((event.target as HTMLElement).closest("button, input, [role='button']")) return;
+                  onRowDoubleClick?.(row);
+                }}
+                sx={{
+                  transition: "background-color .15s ease",
+                  cursor: onRowDoubleClick ? "pointer" : "default",
+                  "&:hover": { backgroundColor: "#F8FAFC" },
+                }}
               >
                 {columns.map((col) => (
                   <React.Fragment key={col.id}>

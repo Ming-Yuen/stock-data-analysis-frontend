@@ -8,6 +8,7 @@ import { MenuTree } from "../services/types/dto/menu";
 import { WatchItem, WatchlistEnquiryResponse } from "../services/types/dto/watchlist";
 import { useTranslation } from "react-i18next";
 import { StockClassificationResponse } from "../services/types/dto/stock";
+import { StockAnalysisPage } from "./StockAnalysis";
 
 interface WatchListPageProps {
   menuTree: MenuTree;
@@ -32,7 +33,7 @@ type SearchState = {
 export function WatchListPage({ menuTree }: WatchListPageProps) {
   const [pageSize] = useState(10);
   const [allData, setAllData] = useState<WatchItem[]>([]);
-  const [hasMore] = useState(true);
+  const [selectedStock, setSelectedStock] = useState<WatchItem | null>(null);
 
   const { t } = useTranslation();
   const initializedRef = useRef(false);
@@ -168,6 +169,10 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
     initializedRef.current = true;
   }, [handleSearch]);
 
+  if (selectedStock) {
+    return <StockAnalysisPage stock={selectedStock} onClose={() => setSelectedStock(null)} />;
+  }
+
   return (
     <Box
       sx={{
@@ -180,15 +185,14 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
     >
       <DynamicFormTable
         pageKey={menuTree.name}
-        title={menuTree.name}
         columns={columns}
         data={allData}
         loading={stockSearch.isPending}
         error={stockSearch.isError ? (stockSearch.error as any) : null}
-        hasMore={hasMore}
-        enableInfiniteScroll={true}
+        enableInfiniteScroll={false}
         onSearch={handleSearch}
         onSearchFieldChange={handleSearchFieldChange}
+        onRowDoubleClick={(row) => setSelectedStock(row as WatchItem)}
       />
     </Box>
   );
