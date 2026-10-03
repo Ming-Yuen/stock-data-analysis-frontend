@@ -1,4 +1,6 @@
 {
+  "shell":{"productName":"MarketScope","productSubtitle":"Analytics Console","navigation":"NAVIGATION","workspace":"Workspace","usMarket":"U.S. Equities","overview":"Market Overview","marketIntelligence":"Market intelligence workspace"},
+  "table":{"workspaceSubtitle":"Search, filter and manage records"},
   "languageSwitcher": {"label":"Language","english":"English","traditionalChinese":"Traditional Chinese","simplifiedChinese":"Simplified Chinese"},
   "menu": {"user":"User","stockAnalysis":"Stock Analysis","dataManagement":"Data Management","jobConfiguration":"Job Configuration","watchList":"Watch List","unknown":"Menu"},
   "dashboard": {

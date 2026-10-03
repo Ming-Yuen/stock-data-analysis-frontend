@@ -8,6 +8,8 @@ import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import theme from "./theme";
 
 function loadMaterialIcons() {
   if (document.querySelector('link[href*="fonts.googleapis.com/icon"]')) return;
@@ -46,9 +48,12 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(container).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   </React.StrictMode>
 );

@@ -731,12 +731,18 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     <Box sx={{ width: "100%", height: "100%" }}>
       <Box
         sx={{
-          mb: 1,
+          mb: 2,
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           alignItems: "center",
+          gap: 2,
+          flexWrap: "wrap",
         }}
       >
+        <Box>
+          <Typography sx={{ fontSize: 24, fontWeight: 800, color: "text.primary", letterSpacing: "-.02em" }}>{title}</Typography>
+          <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.35 }}>{t("table.workspaceSubtitle")}</Typography>
+        </Box>
         <Stack direction="row" spacing={1} alignItems="center">
           <Button variant="outlined" size="small" onClick={handleClearAllSearch}>
             Clear
@@ -757,7 +763,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         </Alert>
       )}
 
-      <Box sx={{ mb: 1 }}>
+      <Paper elevation={0} sx={{ mb: 2, p: searchRows.length ? 2 : 0, borderRadius: 3, border: searchRows.length ? 1 : 0, borderColor: "divider", bgcolor: "background.paper" }}>
         {!criteriaLoading && (
           <Box
             sx={{
@@ -803,16 +809,18 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
             </Box>
           </Box>
         )}
-      </Box>
+      </Paper>
 
       <Box
         onMouseDown={handleMouseDown}
         sx={{
           height: 6,
           cursor: "row-resize",
-          bgcolor: "#e0e0e0",
-          mb: 1,
+          bgcolor: "divider",
+          mb: 2,
           borderRadius: 3,
+          opacity: 0.7,
+          "&:hover": { bgcolor: "primary.light", opacity: 1 },
         }}
       />
 
@@ -820,10 +828,12 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
         component={Paper}
         sx={{
           boxShadow: "none",
-          border: "none",
-          borderRadius: 0,
-          backgroundColor: "background.default",
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 3,
+          backgroundColor: "background.paper",
           maxHeight: maxHeight ?? "none",
+          overflow: "auto",
         }}
         elevation={0}
       >
@@ -831,12 +841,20 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
           size="small"
           stickyHeader
           sx={{
-            "& .MuiTableCell-root": { borderBottom: "none" },
+            "& .MuiTableCell-root": { borderBottom: "none", px: 2, py: 1.5 },
             "& .MuiTableRow-root:not(:last-child) .MuiTableCell-root": {
-              borderBottom: "1px solid #e0e0e0",
+              borderBottom: "1px solid",
+              borderBottomColor: "divider",
             },
             "& .MuiTableHead-root .MuiTableCell-root": {
-              borderBottom: "2px solid #1976d2",
+              borderBottom: "1px solid",
+              borderBottomColor: "divider",
+              bgcolor: "#F8FAFC",
+              color: "text.secondary",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: ".045em",
+              textTransform: "uppercase",
             },
             "& .MuiTableRow-root:last-child .MuiTableCell-root": {
               borderBottom: "none",
@@ -852,7 +870,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
               <TableRow
                 key={rowIndex}
                 ref={rowIndex === filteredData.length - 1 ? lastElementRef : null}
-                sx={{ "&:hover": { backgroundColor: "#f5f5f5" } }}
+                sx={{ transition: "background-color .15s ease", "&:hover": { backgroundColor: "#F8FAFC" } }}
               >
                 {columns.map((col) => (
                   <React.Fragment key={col.id}>

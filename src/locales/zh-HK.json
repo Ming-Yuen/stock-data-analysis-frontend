@@ -465,6 +465,8 @@
   "Mortgage Banks": "按揭銀行",
   "Finance-Mtge Loan/Banker": "金融-按揭貸款/經紀",
   "stockType":"股票類型",
+  "shell":{"productName":"MarketScope","productSubtitle":"市場分析平台","navigation":"導覽","workspace":"工作空間","usMarket":"美國股票市場","overview":"市場總覽","marketIntelligence":"市場情報工作空間"},
+  "table":{"workspaceSubtitle":"搜尋、篩選及管理記錄"},
   "languageSwitcher":{"label":"語言","english":"英文","traditionalChinese":"繁體中文","simplifiedChinese":"簡體中文"},
   "menu":{"user":"使用者","stockAnalysis":"股票分析","dataManagement":"數據管理","jobConfiguration":"工作設定","watchList":"觀察清單","unknown":"選單"},
   "dashboard": {

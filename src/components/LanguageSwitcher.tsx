@@ -46,6 +46,9 @@ const LanguageSwitcher: React.FC = () => {
     <>
       <Box
         onClick={handleOpen}
+        role="button"
+        aria-label={t("languageSwitcher.label")}
+        title={t("languageSwitcher.label")}
         sx={(theme) => ({
           display: "inline-flex",
           alignItems: "center",
@@ -64,7 +67,7 @@ const LanguageSwitcher: React.FC = () => {
           },
         })}
       >
-        <span>{t("languageSwitcher.label")}</span>
+        <span>{t(current.labelKey)}</span>
         <ArrowDropDownIcon sx={{ fontSize: 18 }} />
       </Box>
 
