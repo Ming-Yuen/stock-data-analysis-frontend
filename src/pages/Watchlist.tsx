@@ -134,7 +134,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       { id: "quoteDate", type: "date", label: t("watchlist.columns.quoteDate"), width: 200, displayDateFormat: "yyyy-MM-dd", },
       { id: "closePrice", type: "number", label: t("watchlist.columns.closePrice"), width: 200, },
       { id: "pe", type: "number", label: t("watchlist.columns.pe"), width: 200, },
-      { id: "rsi", type: "number", label: t("watchlist.columns.rsi"), width: 200, },
+      { id: "rsi14", type: "number", label: "RSI (14D)", width: 200, },
       { id: "cashPerShare", type: "number", label: t("watchlist.columns.cashPerShare"), width: 200, },
     ],
     [t, updateWatchList, industryOptions, categoryOptions, subCategoryOptions]

@@ -12,8 +12,12 @@ export interface StockSnapshot {
   stockType: string;
   pe: number;
   peg: number;
-  rsi: number;
+  rsi7?: number | null;
+  rsi14?: number | null;
+  rsi21?: number | null;
   cashPerShare: number;
+  debtPerShare?: number | null;
+  netCashPerShare?: number | null;
   earningsPerShareTtm?: number | null;
   fundamentalAsOfDate?: string;
   latestFilingDate?: string;

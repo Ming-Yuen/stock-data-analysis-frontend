@@ -22,19 +22,34 @@ interface StockAnalysisPageProps {
 const formatNumber = (value?: number | null, digits = 2) =>
   value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 
+const finiteNumber = (value?: number | null) =>
+  value != null && Number.isFinite(Number(value)) ? Number(value) : null;
+
+const momentumLevelKey = (rsi: number) => {
+  if (rsi < 30) return "oversold";
+  if (rsi < 45) return "weak";
+  if (rsi <= 55) return "neutral";
+  if (rsi <= 70) return "strong";
+  return "overbought";
+};
+
 export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
   const { t } = useTranslation();
   const analysis = useMemo(() => {
     const price = Number(stock.closePrice);
     const pe = Number(stock.pe);
     const peg = Number(stock.peg);
-    const rsi = Number(stock.rsi);
-    const cashPerShare = Number(stock.cashPerShare);
+    const rsi7 = finiteNumber(stock.rsi7);
+    const rsi14 = finiteNumber(stock.rsi14);
+    const rsi21 = finiteNumber(stock.rsi21);
+    const netCashPerShare = stock.netCashPerShare == null ? null : Number(stock.netCashPerShare);
     const earningsPerShareTtm = stock.earningsPerShareTtm == null ? null : Number(stock.earningsPerShareTtm);
     const hasEps = earningsPerShareTtm != null && Number.isFinite(earningsPerShareTtm);
     const lossMaking = hasEps && earningsPerShareTtm <= 0;
     const eps = hasEps ? earningsPerShareTtm : null;
-    const usableCashPerShare = Number.isFinite(cashPerShare) && cashPerShare > 0 ? cashPerShare : 0;
+    const usableNetCashPerShare = netCashPerShare != null && Number.isFinite(netCashPerShare)
+      ? netCashPerShare
+      : null;
     const pegLooksInvalid = !Number.isFinite(peg) || peg <= 0 || Math.abs(peg - pe) < 0.01;
 
     // A deliberately conservative heuristic until growth forecasts are available.
@@ -42,8 +57,12 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const targetPeHigh = !pegLooksInvalid && peg <= 1.5 ? 22 : 18;
     const earningsValueLow = eps == null ? null : eps * targetPeLow;
     const earningsValueHigh = eps == null ? null : eps * targetPeHigh;
-    const fairValueLow = earningsValueLow == null ? null : earningsValueLow + usableCashPerShare;
-    const fairValueHigh = earningsValueHigh == null ? null : earningsValueHigh + usableCashPerShare;
+    const fairValueLow = earningsValueLow == null || usableNetCashPerShare == null
+      ? null
+      : earningsValueLow + usableNetCashPerShare;
+    const fairValueHigh = earningsValueHigh == null || usableNetCashPerShare == null
+      ? null
+      : earningsValueHigh + usableNetCashPerShare;
     const buyLow = fairValueLow == null ? null : fairValueLow * 0.8;
     const buyHigh = fairValueLow;
 
@@ -64,15 +83,25 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       }
     }
 
-    const momentum = !Number.isFinite(rsi)
-      ? t("stockAnalysis.value.insufficientData")
-      : rsi < 30
-        ? t("stockAnalysis.momentum.oversold")
-        : rsi > 70
-          ? t("stockAnalysis.momentum.overbought")
-          : t("stockAnalysis.momentum.neutral");
+    let momentumKey = "neutral";
+    if (rsi7 == null || rsi14 == null || rsi21 == null) {
+      momentumKey = "insufficient";
+    } else if (rsi7 < 30 && rsi21 >= 50) {
+      momentumKey = "shortOversoldTrendHealthy";
+    } else if (rsi7 > 70 && rsi21 >= 45 && rsi21 <= 70) {
+      momentumKey = "shortOverboughtTrendHealthy";
+    } else if (rsi14 < 30) {
+      momentumKey = "broadlyOversold";
+    } else if (rsi14 > 70) {
+      momentumKey = "broadlyOverbought";
+    } else if (rsi7 < rsi14 && rsi14 < rsi21) {
+      momentumKey = "weakening";
+    } else if (rsi7 > rsi14 && rsi14 > rsi21) {
+      momentumKey = "strengthening";
+    }
+    const momentum = t(`stockMomentum.summary.${momentumKey}`);
 
-    return { eps, targetPeLow, targetPeHigh, earningsValueLow, earningsValueHigh, fairValueLow, fairValueHigh, buyLow, buyHigh, valuation, color, momentum, pegLooksInvalid, lossMaking };
+    return { eps, targetPeLow, targetPeHigh, earningsValueLow, earningsValueHigh, fairValueLow, fairValueHigh, buyLow, buyHigh, valuation, color, momentum, pegLooksInvalid, lossMaking, rsi7, rsi14, rsi21 };
   }, [stock, t]);
 
   const unavailable = t("stockAnalysis.value.unavailable");
@@ -115,8 +144,9 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
           [t("stockAnalysis.metrics.closePrice"), formatNumber(stock.closePrice)],
           ["PE", analysis.lossMaking ? t("stockAnalysisValue.lossMaking") : formatNumber(stock.pe)],
           ["PEG", analysis.lossMaking ? t("stockAnalysisValue.lossMaking") : formatNumber(stock.peg)],
-          ["RSI", formatNumber(stock.rsi)],
           [t("stockAnalysis.metrics.cashPerShare"), formatNumber(stock.cashPerShare)],
+          [t("stockAnalysis.metrics.debtPerShare"), formatNumber(stock.debtPerShare)],
+          [t("stockAnalysis.metrics.netCashPerShare"), formatNumber(stock.netCashPerShare)],
           [t("stockAnalysis.metrics.ttmEps"), formatNumber(analysis.eps)],
         ].map(([label, value]) => (
           <Grid key={label} size={{ xs: 6, md: 2 }}>
@@ -161,11 +191,11 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
                 : t("stockAnalysis.calculationDescription", {
                     low: analysis.targetPeLow,
                     high: analysis.targetPeHigh,
-                    cash: formatNumber(stock.cashPerShare),
+                    netCash: formatNumber(stock.netCashPerShare),
                   })}
             </Typography>
             {!analysis.lossMaking && analysis.pegLooksInvalid && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
+              <Alert severity="info" sx={{ mt: 2 }}>
                 {t("stockAnalysis.pegWarning")}
               </Alert>
             )}
@@ -178,14 +208,32 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
             <Stack spacing={2}>
               <Box>
                 <Typography variant="body2" color="text.secondary">{t("stockAnalysis.rsiMomentum")}</Typography>
-                <Typography>{analysis.momentum}</Typography>
+                <Stack spacing={0.75} sx={{ mt: 0.75 }}>
+                  {[
+                    ["RSI (7D)", analysis.rsi7, "shortTerm"],
+                    ["RSI (14D)", analysis.rsi14, "standard"],
+                    ["RSI (21D)", analysis.rsi21, "mediumTerm"],
+                  ].map(([label, value, horizon]) => (
+                    <Stack key={String(label)} direction="row" justifyContent="space-between" spacing={2}>
+                      <Typography>{label}</Typography>
+                      <Typography sx={{ fontWeight: 700 }}>
+                        {formatNumber(value as number | null)} · {value != null
+                          ? t(`stockMomentum.level.${momentumLevelKey(value as number)}`)
+                          : t("stockAnalysis.value.insufficientData")} · {t(`stockMomentum.horizon.${horizon}`)}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+                <Alert severity="info" sx={{ mt: 1.5 }}>{analysis.momentum}</Alert>
               </Box>
               <Box>
                 <Typography variant="body2" color="text.secondary">{t("stockAnalysis.cashBuffer")}</Typography>
                 <Typography>
                   {t("stockAnalysis.cashBufferDescription", {
                     cash: formatNumber(stock.cashPerShare),
-                    percentage: stock.closePrice > 0 && stock.cashPerShare != null ? `${formatNumber(stock.cashPerShare / stock.closePrice * 100, 1)}%` : "—",
+                    debt: formatNumber(stock.debtPerShare),
+                    netCash: formatNumber(stock.netCashPerShare),
+                    percentage: stock.closePrice > 0 && stock.netCashPerShare != null ? `${formatNumber(stock.netCashPerShare / stock.closePrice * 100, 1)}%` : "—",
                   })}
                 </Typography>
               </Box>
