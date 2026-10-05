@@ -707,13 +707,13 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       >
         <Stack direction="row" spacing={1} alignItems="center">
           <Button variant="outlined" size="small" onClick={handleClearAllSearch}>
-            Clear
+            {t("common.clear")}
           </Button>
-          <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ mt: 0.2 }}>
+          <IconButton aria-label={t("table.searchFieldSettings")} size="small" onClick={() => setSettingsOpen(true)} sx={{ mt: 0.2 }}>
             <SettingsIcon fontSize="small" />
           </IconButton>
           <Button variant="outlined" size="small" startIcon={<Search />} onClick={handleSearchClick}>
-            Search
+            {t("common.search")}
           </Button>
           {toolbarActions}
         </Stack>
@@ -721,7 +721,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
 
       {currentError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          錯誤：{(currentError as any).message}
+          {t("common.error")}: {(currentError as any).message}
         </Alert>
       )}
 
@@ -854,7 +854,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
                     variant="outlined"
                     size="small"
                   >
-                    新增列
+                    {t("table.addRow")}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -864,10 +864,10 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       </TableContainer>
 
       <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>搜尋欄位設定</DialogTitle>
+        <DialogTitle>{t("table.searchFieldSettings")}</DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            勾選代表「不顯示」該搜尋欄位。
+            {t("table.hiddenFieldHint")}
           </Typography>
           <FormGroup>
             {columns
@@ -887,13 +887,13 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
           </FormGroup>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSettingsOpen(false)}>取消</Button>
+          <Button onClick={() => setSettingsOpen(false)}>{t("common.cancel")}</Button>
           <Button
             onClick={handleSaveSettings}
             variant="contained"
             disabled={updateCriteriaMutation.isPending}
           >
-            儲存
+            {t("common.save")}
           </Button>
         </DialogActions>
       </Dialog>

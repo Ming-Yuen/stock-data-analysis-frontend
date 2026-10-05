@@ -14,8 +14,12 @@ export interface StockSnapshot {
   peg: number;
   rsi: number;
   cashPerShare: number;
-  fundamentalDate?: string;
-  fundamentalUpdatedAt?: string;
+  earningsPerShareTtm?: number | null;
+  fundamentalAsOfDate?: string;
+  latestFilingDate?: string;
+  fiscalYear?: number;
+  fiscalPeriod?: string;
+  nextEarningsDate?: string;
   industry?: string;
   category?: string;
   subCategory?: string;

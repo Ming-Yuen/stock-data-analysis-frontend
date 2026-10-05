@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { ArrowBack, ShowChart } from "@mui/icons-material";
 import { WatchItem } from "../services/types/dto/watchlist";
+import { useTranslation } from "react-i18next";
 
 interface StockAnalysisPageProps {
   stock: WatchItem;
@@ -21,21 +22,18 @@ interface StockAnalysisPageProps {
 const formatNumber = (value?: number | null, digits = 2) =>
   value == null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
 
-const formatDateTime = (value?: string) => {
-  if (!value) return "暂无";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
-};
-
 export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
+  const { t } = useTranslation();
   const analysis = useMemo(() => {
     const price = Number(stock.closePrice);
     const pe = Number(stock.pe);
     const peg = Number(stock.peg);
     const rsi = Number(stock.rsi);
     const cashPerShare = Number(stock.cashPerShare);
-    const hasValuationData = price > 0 && pe > 0;
-    const eps = hasValuationData ? price / pe : null;
+    const earningsPerShareTtm = stock.earningsPerShareTtm == null ? null : Number(stock.earningsPerShareTtm);
+    const hasEps = earningsPerShareTtm != null && Number.isFinite(earningsPerShareTtm);
+    const lossMaking = hasEps && earningsPerShareTtm <= 0;
+    const eps = hasEps ? earningsPerShareTtm : null;
     const usableCashPerShare = Number.isFinite(cashPerShare) && cashPerShare > 0 ? cashPerShare : 0;
     const pegLooksInvalid = !Number.isFinite(peg) || peg <= 0 || Math.abs(peg - pe) < 0.01;
 
@@ -49,59 +47,77 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const buyLow = fairValueLow == null ? null : fairValueLow * 0.8;
     const buyHigh = fairValueLow;
 
-    let valuation = "资料不足";
+    let valuation = lossMaking
+      ? t("stockAnalysis.valuation.lossMaking")
+      : t("stockAnalysis.value.insufficientData");
     let color: "success" | "warning" | "error" | "default" = "default";
     if (buyHigh != null && fairValueHigh != null) {
       if (price <= buyHigh) {
-        valuation = "进入关注买入区间";
+        valuation = t("stockAnalysis.valuation.buyZone");
         color = "success";
       } else if (price <= fairValueHigh) {
-        valuation = "合理估值区间";
+        valuation = t("stockAnalysis.valuation.fairValue");
         color = "warning";
       } else {
-        valuation = "估值偏高";
+        valuation = t("stockAnalysis.valuation.overvalued");
         color = "error";
       }
     }
 
     const momentum = !Number.isFinite(rsi)
-      ? "资料不足"
+      ? t("stockAnalysis.value.insufficientData")
       : rsi < 30
-        ? "超卖，留意反弹与基本面风险"
+        ? t("stockAnalysis.momentum.oversold")
         : rsi > 70
-          ? "超买，短线追价风险较高"
-          : "动量中性";
+          ? t("stockAnalysis.momentum.overbought")
+          : t("stockAnalysis.momentum.neutral");
 
-    return { eps, targetPeLow, targetPeHigh, earningsValueLow, earningsValueHigh, fairValueLow, fairValueHigh, buyLow, buyHigh, valuation, color, momentum, pegLooksInvalid };
-  }, [stock]);
+    return { eps, targetPeLow, targetPeHigh, earningsValueLow, earningsValueHigh, fairValueLow, fairValueHigh, buyLow, buyHigh, valuation, color, momentum, pegLooksInvalid, lossMaking };
+  }, [stock, t]);
+
+  const unavailable = t("stockAnalysis.value.unavailable");
+  const translatedClassification = [stock.industry, stock.category, stock.subCategory]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => t(value, { defaultValue: value }));
+  const reportPeriod = stock.fiscalYear && stock.fiscalPeriod
+    ? t(`stockAnalysisDates.reportPeriod.${stock.fiscalPeriod}`, {
+        year: stock.fiscalYear,
+        defaultValue: t("stockAnalysisDates.reportPeriod.unknown", { year: stock.fiscalYear, period: stock.fiscalPeriod }),
+      })
+    : t("stockAnalysisDates.reportPeriod.latest");
 
   return (
     <Box sx={{ width: "100%" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 800 }}>
-            {stock.symbol} 股票分析
+            {t("stockAnalysis.title", { symbol: stock.symbol })}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {stock.industry || "—"} · {stock.category || "—"} · 行情日期 {stock.quoteDate || "—"}
+            {stock.industry ? t(stock.industry, { defaultValue: stock.industry }) : "—"} · {stock.category ? t(stock.category, { defaultValue: stock.category }) : "—"} · {t("stockAnalysisDates.tradingDate")} {stock.quoteDate || "—"}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            财报日期 {stock.fundamentalDate || "暂无"} · 财报数据更新时间 {formatDateTime(stock.fundamentalUpdatedAt)}
+            {reportPeriod} · {t("stockAnalysisDates.secFilingDate")} {stock.latestFilingDate || unavailable} · {t("stockAnalysisDates.snapshotAsOfDate")} {stock.fundamentalAsOfDate || unavailable}
           </Typography>
+          {stock.nextEarningsDate && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+              {t("stockAnalysisDates.nextEarningsDate")} {stock.nextEarningsDate}
+            </Typography>
+          )}
         </Box>
         <Button startIcon={<ArrowBack />} variant="outlined" onClick={onClose}>
-          返回观察列表
+          {t("stockAnalysis.backToWatchlist")}
         </Button>
       </Stack>
 
       <Grid container spacing={2}>
         {[
-          ["收盘价", formatNumber(stock.closePrice)],
-          ["PE", formatNumber(stock.pe)],
-          ["PEG", formatNumber(stock.peg)],
+          [t("stockAnalysis.metrics.closePrice"), formatNumber(stock.closePrice)],
+          ["PE", analysis.lossMaking ? t("stockAnalysisValue.lossMaking") : formatNumber(stock.pe)],
+          ["PEG", analysis.lossMaking ? t("stockAnalysisValue.lossMaking") : formatNumber(stock.peg)],
           ["RSI", formatNumber(stock.rsi)],
-          ["每股现金", formatNumber(stock.cashPerShare)],
-          ["推算 EPS", formatNumber(analysis.eps)],
+          [t("stockAnalysis.metrics.cashPerShare"), formatNumber(stock.cashPerShare)],
+          [t("stockAnalysis.metrics.ttmEps"), formatNumber(analysis.eps)],
         ].map(([label, value]) => (
           <Grid key={label} size={{ xs: 6, md: 2 }}>
             <Paper variant="outlined" sx={{ p: 2, height: "100%" }}>
@@ -117,32 +133,40 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
           <Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <ShowChart color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>估值与关注区间</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{t("stockAnalysis.valuationSection")}</Typography>
               <Chip label={analysis.valuation} color={analysis.color} size="small" />
             </Stack>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="body2" color="text.secondary">关注买入区间（含安全边际）</Typography>
+                <Typography variant="body2" color="text.secondary">{t("stockAnalysis.buyRange")}</Typography>
                 <Typography variant="h4" color="success.main" sx={{ fontWeight: 800, mt: 0.5 }}>
-                  {analysis.buyLow == null ? "资料不足" : `${formatNumber(analysis.buyLow)} – ${formatNumber(analysis.buyHigh)}`}
+                  {analysis.buyLow == null
+                    ? t(analysis.lossMaking ? "stockAnalysis.value.peNotApplicable" : "stockAnalysis.value.insufficientData")
+                    : `${formatNumber(analysis.buyLow)} – ${formatNumber(analysis.buyHigh)}`}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="body2" color="text.secondary">现金调整后的合理价值情景</Typography>
+                <Typography variant="body2" color="text.secondary">{t("stockAnalysis.cashAdjustedFairValue")}</Typography>
                 <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>
-                  {analysis.fairValueLow == null ? "资料不足" : `${formatNumber(analysis.fairValueLow)} – ${formatNumber(analysis.fairValueHigh)}`}
+                  {analysis.fairValueLow == null
+                    ? t(analysis.lossMaking ? "stockAnalysis.value.peNotApplicable" : "stockAnalysis.value.insufficientData")
+                    : `${formatNumber(analysis.fairValueLow)} – ${formatNumber(analysis.fairValueHigh)}`}
                 </Typography>
               </Grid>
             </Grid>
             <Divider sx={{ my: 2 }} />
             <Typography variant="body2" color="text.secondary">
-              计算：收盘价 ÷ PE 得出推算 EPS，采用 {analysis.targetPeLow}–{analysis.targetPeHigh} 倍目标 PE，
-              再加每股现金 {formatNumber(stock.cashPerShare)}。关注区间以合理价值下沿加入 20% 安全边际。
-              因缺少每股负债，现金部分只是情景假设，并不等同净现金。
+              {analysis.lossMaking
+                ? t("stockAnalysis.lossMakingDescription", { eps: formatNumber(analysis.eps) })
+                : t("stockAnalysis.calculationDescription", {
+                    low: analysis.targetPeLow,
+                    high: analysis.targetPeHigh,
+                    cash: formatNumber(stock.cashPerShare),
+                  })}
             </Typography>
-            {analysis.pegLooksInvalid && (
+            {!analysis.lossMaking && analysis.pegLooksInvalid && (
               <Alert severity="warning" sx={{ mt: 2 }}>
-                PEG 数据与 PE 相同或无效，本次估值没有使用 PEG 调高目标倍数，请检查后端字段映射。
+                {t("stockAnalysis.pegWarning")}
               </Alert>
             )}
           </Paper>
@@ -150,21 +174,24 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
 
         <Grid size={{ xs: 12, md: 5 }}>
           <Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>辅助判断</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>{t("stockAnalysis.supportingAssessment")}</Typography>
             <Stack spacing={2}>
               <Box>
-                <Typography variant="body2" color="text.secondary">RSI 动量</Typography>
+                <Typography variant="body2" color="text.secondary">{t("stockAnalysis.rsiMomentum")}</Typography>
                 <Typography>{analysis.momentum}</Typography>
               </Box>
               <Box>
-                <Typography variant="body2" color="text.secondary">现金缓冲</Typography>
+                <Typography variant="body2" color="text.secondary">{t("stockAnalysis.cashBuffer")}</Typography>
                 <Typography>
-                  每股现金 {formatNumber(stock.cashPerShare)}，约占当前股价 {stock.closePrice > 0 && stock.cashPerShare != null ? `${formatNumber(stock.cashPerShare / stock.closePrice * 100, 1)}%` : "—"}。
+                  {t("stockAnalysis.cashBufferDescription", {
+                    cash: formatNumber(stock.cashPerShare),
+                    percentage: stock.closePrice > 0 && stock.cashPerShare != null ? `${formatNumber(stock.cashPerShare / stock.closePrice * 100, 1)}%` : "—",
+                  })}
                 </Typography>
               </Box>
               <Box>
-                <Typography variant="body2" color="text.secondary">分类</Typography>
-                <Typography>{[stock.industry, stock.category, stock.subCategory].filter(Boolean).join(" / ") || "—"}</Typography>
+                <Typography variant="body2" color="text.secondary">{t("stockAnalysis.classification")}</Typography>
+                <Typography>{translatedClassification.join(" / ") || "—"}</Typography>
               </Box>
             </Stack>
           </Paper>
@@ -172,7 +199,7 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       </Grid>
 
       <Alert severity="info" sx={{ mt: 2 }}>
-        此区间是基于现有快照数据的规则模型，不是实时行情或投资建议。实际决策还应结合盈利增长、负债、现金流、行业周期和最新公告。
+        {t("stockAnalysis.disclaimer")}
       </Alert>
     </Box>
   );

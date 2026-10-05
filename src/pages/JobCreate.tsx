@@ -9,6 +9,7 @@ import { ApiResponse } from "../services/types/dto/apiResponse";
 import { Job, TaskGroup } from "../services/types/dto/batch";
 import { ActiveStatus } from "../services/types/enums/ActiveStatus";
 import { MenuTree } from "../services/types/dto/menu";
+import { useTranslation } from "react-i18next";
 
 interface JobCreatePageProps {
   menuTree: MenuTree;
@@ -77,6 +78,7 @@ const scheduleFromJob = (job?: Job): CronSchedule => {
 };
 
 export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
+  const { t } = useTranslation();
   const isEditing = Boolean(job);
   // ✅ 使用環境變數配置 API endpoint
   const createJob = useMutate<ApiResponse>({
@@ -182,16 +184,16 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
   return (
     <Box sx={{ width: "100%", mx: "auto" }}>
       <Typography variant="h5" gutterBottom>
-        {isEditing ? "Edit Job" : "Create Job"}
+        {isEditing ? t("job.form.editTitle") : t("job.form.createTitle")}
       </Typography>
       {createJob.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          Save failed, please try again later
+          {t("job.form.saveFailed")}
         </Alert>
       )}
       {createJob.isSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Job saved successfully!
+          {t("job.form.saveSuccess")}
         </Alert>
       )}
 
@@ -201,11 +203,11 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
           <Grid container spacing={2}>
             {/* Task Group */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label="Task Group" required error={errors.taskGroup?.message}>
+              <FormField label={t("job.columns.taskGroup")} required error={errors.taskGroup?.message}>
                 <Controller
                   name="taskGroup"
                   control={control}
-                  rules={{ required: "Please select or enter Task Group" }}
+                  rules={{ required: t("job.validation.taskGroupRequired") }}
                   render={({ field: { onChange, value, ...field } }) => (
                     <Autocomplete
                       {...field}
@@ -219,7 +221,7 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
                         const found = taskGroupOptions.find((opt) => opt.value === option);
                         return found ? found.label : option;
                       }}
-                      renderInput={(params) => <TextField {...params} error={!!errors.taskGroup} size="small" placeholder="Please select or enter" />}
+                      renderInput={(params) => <TextField {...params} error={!!errors.taskGroup} size="small" placeholder={t("job.form.selectOrEnter")} />}
                     />
                   )}
                 />
@@ -228,35 +230,35 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
 
             {/* Task Name */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label="Task Name" required error={errors.jobName?.message}>
-                <Controller name="jobName" control={control} rules={{ required: "Task name cannot be empty" }} render={({ field }) => <TextField {...field} disabled={isEditing} error={!!errors.jobName} size="small" fullWidth placeholder="Please enter task name" />} />
+              <FormField label={t("job.columns.taskName")} required error={errors.jobName?.message}>
+                <Controller name="jobName" control={control} rules={{ required: t("job.validation.taskNameRequired") }} render={({ field }) => <TextField {...field} disabled={isEditing} error={!!errors.jobName} size="small" fullWidth placeholder={t("job.form.taskNamePlaceholder")} />} />
               </FormField>
             </Grid>
 
             {/* Task Description */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label="Description">
-                <Controller name="taskDescription" control={control} render={({ field }) => <TextField {...field} size="small" fullWidth placeholder="Please enter task description" />} />
+              <FormField label={t("job.form.description")}>
+                <Controller name="taskDescription" control={control} render={({ field }) => <TextField {...field} size="small" fullWidth placeholder={t("job.form.descriptionPlaceholder")} />} />
               </FormField>
             </Grid>
 
             {/* Job Class Path - 现在只占一格 */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label="Job Path" required error={errors.jobClassPath?.message}>
-                <Controller name="jobClassPath" control={control} rules={{ required: "Job Class Path cannot be empty" }} render={({ field }) => <TextField {...field} error={!!errors.jobClassPath} size="small" fullWidth placeholder="e.g. com.example.jobs.MyJobClass" />} />
+              <FormField label={t("job.form.jobPath")} required error={errors.jobClassPath?.message}>
+                <Controller name="jobClassPath" control={control} rules={{ required: t("job.validation.jobPathRequired") }} render={({ field }) => <TextField {...field} error={!!errors.jobClassPath} size="small" fullWidth placeholder={t("job.form.jobPathPlaceholder")} />} />
               </FormField>
             </Grid>
 
             {/* Status - 现在与 Job Class Path 在同一行 */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <FormField label="Status">
+              <FormField label={t("job.form.status")}>
                 <Controller
                   name="activeStatus"
                   control={control}
                   render={({ field }) => (
                     <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
                       <Checkbox checked={field.value === ActiveStatus.ACTIVE} onChange={(e) => field.onChange(e.target.checked ? ActiveStatus.ACTIVE : ActiveStatus.INACTIVE)} />
-                      <Typography variant="body2">Active</Typography>
+                      <Typography variant="body2">{t("job.status.active")}</Typography>
                     </Box>
                   )}
                 />
@@ -265,7 +267,7 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
 
             {/* Job Params */}
             <Grid size={12}>
-              <FormField label="Job Params" error={errors.jobParams?.message}>
+              <FormField label={t("job.form.jobParams")} error={errors.jobParams?.message}>
                 <Controller
                   name="jobParams"
                   control={control}
@@ -276,7 +278,7 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
                           JSON.parse(value);
                           return true;
                         } catch {
-                          return "Please enter valid JSON format";
+                          return t("job.validation.validJson");
                         }
                       }
                       return true;
@@ -287,7 +289,7 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
                       <TextField {...field} error={!!errors.jobParams} multiline rows={3} fullWidth placeholder='{"key": "value"}' />
                       {!errors.jobParams && (
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                          Please enter parameters in JSON format
+                          {t("job.form.jsonHint")}
                         </Typography>
                       )}
                     </>
@@ -298,11 +300,11 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
 
             {/* Frequency */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label="Frequency" required error={errors.cronSchedule?.frequency?.message}>
+              <FormField label={t("job.form.frequency")} required error={errors.cronSchedule?.frequency?.message}>
                 <Controller
                   name="cronSchedule.frequency"
                   control={control}
-                  rules={{ required: "Please select execution frequency" }}
+                  rules={{ required: t("job.validation.frequencyRequired") }}
                   render={({ field }) => (
                     <Autocomplete
                       value={field.value}
@@ -311,9 +313,9 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
                       }}
                       options={["daily", "weekly", "monthly"]}
                       getOptionLabel={(option) => {
-                        if (option === "daily") return "Daily";
-                        if (option === "weekly") return "Weekly";
-                        if (option === "monthly") return "Monthly";
+                        if (option === "daily") return t("job.frequency.daily");
+                        if (option === "weekly") return t("job.frequency.weekly");
+                        if (option === "monthly") return t("job.frequency.monthly");
                         return option;
                       }}
                       renderInput={(params) => <TextField {...params} error={!!errors.cronSchedule?.frequency} size="small" />}
@@ -325,14 +327,14 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
 
             {/* Start Date Time */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label="Start Date Time" required error={errors.cronSchedule?.startDateTime?.message}>
-                <Controller name="cronSchedule.startDateTime" control={control} rules={{ required: "Please select start date and time" }} render={({ field }) => <TextField {...field} type="datetime-local" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.startDateTime} />} />
+              <FormField label={t("job.form.startDateTime")} required error={errors.cronSchedule?.startDateTime?.message}>
+                <Controller name="cronSchedule.startDateTime" control={control} rules={{ required: t("job.validation.startDateTimeRequired") }} render={({ field }) => <TextField {...field} type="datetime-local" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.startDateTime} />} />
               </FormField>
             </Grid>
 
             {/* End Date */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label="End Date (Optional)">
+              <FormField label={t("job.form.endDateOptional")}>
                 <Controller name="cronSchedule.endDate" control={control} render={({ field }) => <TextField {...field} type="date" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth />} />
               </FormField>
             </Grid>
@@ -342,17 +344,17 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
               <Grid size={12}>
                 <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
                   <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 100, pt: 0.5 }}>
-                    Select Days
+                    {t("job.form.selectDays")}
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", flex: 1 }}>
                     {[
-                      { label: "Sun", value: 0 },
-                      { label: "Mon", value: 1 },
-                      { label: "Tue", value: 2 },
-                      { label: "Wed", value: 3 },
-                      { label: "Thu", value: 4 },
-                      { label: "Fri", value: 5 },
-                      { label: "Sat", value: 6 },
+                      { label: t("job.weekday.sun"), value: 0 },
+                      { label: t("job.weekday.mon"), value: 1 },
+                      { label: t("job.weekday.tue"), value: 2 },
+                      { label: t("job.weekday.wed"), value: 3 },
+                      { label: t("job.weekday.thu"), value: 4 },
+                      { label: t("job.weekday.fri"), value: 5 },
+                      { label: t("job.weekday.sat"), value: 6 },
                     ].map((day) => (
                       <Box key={day.value} sx={{ display: "flex", alignItems: "center", border: "1px solid #e0e0e0", borderRadius: 1, px: 1.5, py: 0.5, cursor: "pointer", bgcolor: selectedDays.includes(day.value) ? "#e3f2fd" : "transparent", "&:hover": { bgcolor: selectedDays.includes(day.value) ? "#bbdefb" : "#f5f5f5" } }} onClick={() => handleDayToggle(day.value)}>
                         <Checkbox checked={selectedDays.includes(day.value)} size="small" sx={{ p: 0, mr: 0.5 }} />
@@ -368,10 +370,10 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
             <Grid size={12}>
               <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", pt: 2, borderTop: "1px solid #e0e0e0" }}>
                 <Button variant="outlined" startIcon={<Cancel />} onClick={handleCancel} disabled={createJob.isPending}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" variant="contained" color="primary" startIcon={<Save />} disabled={createJob.isPending}>
-                  {createJob.isPending ? "Saving..." : "Save"}
+                  {createJob.isPending ? t("common.saving") : t("common.save")}
                 </Button>
               </Box>
             </Grid>
