@@ -18,12 +18,18 @@ export interface StockSnapshot {
   cashPerShare: number;
   debtPerShare?: number | null;
   netCashPerShare?: number | null;
+  cashLikeAssetsPerShare?: number | null;
+  netCashForValuationPerShare?: number | null;
   earningsPerShareTtm?: number | null;
   fundamentalAsOfDate?: string;
   latestFilingDate?: string;
   fiscalYear?: number;
   fiscalPeriod?: string;
+  epsCalculationMethod?: string;
   nextEarningsDate?: string;
+  postFilingEventDate?: string;
+  postFilingEventTitle?: string;
+  postFilingEventDescription?: string;
   industry?: string;
   category?: string;
   subCategory?: string;

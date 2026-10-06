@@ -1,4 +1,18 @@
 {
+  "stockAnalysisExtra": {
+    "debtPerShare": "每股债务（账面价值）",
+    "epsCalculationMethod": "TTM EPS 计算口径",
+    "epsCalculationMethods": {
+      "REPORTED_FOUR_QUARTERS": "最近四个已报告单季度稀释 EPS 之和",
+      "RECONSTRUCTED_TTM_DILUTED_EPS": "系统重算：TTM 净利润 ÷ 重构的 TTM 稀释加权平均股数",
+      "NET_INCOME_DIVIDED_BY_DILUTED_SHARES": "系统重算：TTM 净利润 ÷ 重构的 TTM 稀释加权平均股数"
+    },
+    "postFilingEvent": {
+      "title": "财报后资本市场申报",
+      "description": "公司在最新财报期后提交了证券发行相关文件，当前现金、债务或稀释股数可能已与财报数据明显不同；页面所示财报数字未作推算调整。"
+    },
+    "financialPeriodEnd": "财报截止日期"
+  },
   "stockMomentum": {
     "horizon": {"shortTerm":"短线","standard":"主指标","mediumTerm":"中期"},
     "level": {"oversold":"超卖","weak":"偏弱","neutral":"中性","strong":"偏强","overbought":"超买"},
@@ -476,7 +490,7 @@
     "stockAnalysisDates":{"tradingDate":"交易日日期","secFilingDate":"SEC 申报日期","snapshotAsOfDate":"估值快照日期","nextEarningsDate":"预计财报公布日期","reportPeriod":{"Q1":"{{year}} 年第 1 季度财报","Q2":"{{year}} 年第 2 季度财报","Q3":"{{year}} 年第 3 季度财报","Q4":"{{year}} 年第 4 季度财报","FY":"{{year}} 年度财报","unknown":"{{year}} 年 {{period}} 财报","latest":"最新财报"}},
     "watchlist":{"columns":{"watched":"自选","symbol":"股票代码","stockType":"股票类型","industry":"行业","category":"类别","subCategory":"子类别","quoteDate":"报价日期","closePrice":"收盘价","pe":"市盈率","rsi":"RSI","cashPerShare":"每股现金"}},
     "stockAnalysisValue":{"lossMaking":"亏损"},
-    "stockAnalysis":{"title":"{{symbol}} 股票分析","quoteDate":"行情日期","fundamentalDate":"财报日期","fundamentalUpdatedAt":"财报数据更新时间","backToWatchlist":"返回观察列表","metrics":{"closePrice":"收盘价","cashPerShare":"每股现金","debtPerShare":"每股债务","netCashPerShare":"每股净现金","ttmEps":"TTM 每股盈利"},"valuationSection":"估值与关注区间","buyRange":"关注买入区间（含安全边际）","cashAdjustedFairValue":"净现金调整后的合理价值情景","calculationDescription":"计算：使用 TTM 每股盈利，采用 {{low}}–{{high}} 倍目标市盈率，再加每股净现金 {{netCash}}（净负债时为负数）。关注区间以合理价值下沿加入 20% 安全边际。","lossMakingDescription":"当前 TTM 每股盈利为 {{eps}}，公司处于亏损状态，无法使用目标市盈率计算合理价值。建议结合 P/S、EV/Sales、现金水平及盈利改善趋势进行估值。","pegWarning":"缺少可靠的 EPS 增长率，PEG 暂不提供，也不会用于调整目标倍数。","supportingAssessment":"辅助判断","rsiMomentum":"RSI 动量","cashBuffer":"现金与债务","cashBufferDescription":"每股现金 {{cash}}，每股债务 {{debt}}，每股净现金 {{netCash}}，约占当前股价 {{percentage}}。","classification":"分类","disclaimer":"此区间是基于现有快照数据的规则模型，不是实时行情或投资建议。实际决策还应结合盈利增长、负债、现金流、行业周期和最新公告。","value":{"unavailable":"暂无","insufficientData":"资料不足","notMeaningful":"N/M","peNotApplicable":"P/E 不适用"},"valuation":{"buyZone":"进入关注买入区间","fairValue":"合理估值区间","overvalued":"估值偏高","lossMaking":"盈利为负，P/E 不适用"},"momentum":{"oversold":"超卖，留意反弹与基本面风险","overbought":"超买，短线追价风险较高","neutral":"动量中性"}},
+    "stockAnalysis":{"title":"{{symbol}} 股票分析","quoteDate":"行情日期","fundamentalDate":"财报日期","fundamentalUpdatedAt":"财报数据更新时间","backToWatchlist":"返回观察列表","metrics":{"closePrice":"收盘价","cashPerShare":"每股现金","cashLikeAssetsPerShare":"每股现金及短期投资","debtPerShare":"每股债务","netCashPerShare":"每股现金减债务","netCashForValuationPerShare":"每股估值净现金","ttmEps":"TTM 每股盈利"},"valuationSection":"估值与关注区间","buyRange":"关注买入区间（含安全边际）","cashAdjustedFairValue":"净现金调整后的合理价值情景","calculationDescription":"计算：使用 TTM 每股盈利，采用 {{low}}–{{high}} 倍目标市盈率，再加每股估值净现金 {{netCash}}（净负债时为负数）。关注区间以合理价值下沿加入 20% 安全边际。","lossMakingDescription":"当前 TTM 每股盈利为 {{eps}}，公司处于亏损状态，无法使用目标市盈率计算合理价值。建议结合 P/S、EV/Sales、现金水平及盈利改善趋势进行估值。","pegWarning":"缺少可靠的 EPS 增长率，PEG 暂不提供，也不会用于调整目标倍数。","supportingAssessment":"辅助判断","rsiMomentum":"RSI 动量","cashBuffer":"现金类资产与债务","cashBufferDescription":"每股现金及短期投资 {{cash}}，每股债务 {{debt}}，每股估值净现金 {{netCash}}，约占当前股价 {{percentage}}。","classification":"分类","disclaimer":"此区间是基于现有快照数据的规则模型，不是实时行情或投资建议。实际决策还应结合盈利增长、负债、现金流、行业周期和最新公告。","value":{"unavailable":"暂无","insufficientData":"资料不足","notMeaningful":"N/M","peNotApplicable":"P/E 不适用"},"valuation":{"buyZone":"进入关注买入区间","fairValue":"合理估值区间","overvalued":"估值偏高","lossMaking":"盈利为负，P/E 不适用"},"momentum":{"oversold":"超卖，留意反弹与基本面风险","overbought":"超买，短线追价风险较高","neutral":"动量中性"}},
     "job":{"columns":{"taskName":"任务名称","taskGroup":"任务分组","active":"启用状态","executionTime":"执行时间","executionResult":"执行结果","run":"执行"},"actions":{"create":"新增","run":"执行任务"},"status":{"active":"已启用","inactive":"已停用"},"executionStatus":{"COMPLETED":"已完成","FAILED":"失败","RUNNING":"执行中"},"form":{"createTitle":"新增任务","editTitle":"编辑任务","saveFailed":"保存失败，请稍后重试。","saveSuccess":"任务已成功保存！","selectOrEnter":"请选择或输入","taskNamePlaceholder":"请输入任务名称","description":"描述","descriptionPlaceholder":"请输入任务描述","jobPath":"任务类路径","jobPathPlaceholder":"例如 com.example.jobs.MyJobClass","status":"状态","jobParams":"任务参数","jsonHint":"请以 JSON 格式输入参数","frequency":"执行频率","startDateTime":"开始日期和时间","endDateOptional":"结束日期（可选）","selectDays":"选择星期"},"validation":{"taskGroupRequired":"请选择或输入任务分组","taskNameRequired":"任务名称不能为空","jobPathRequired":"任务类路径不能为空","validJson":"请输入有效的 JSON 格式","frequencyRequired":"请选择执行频率","startDateTimeRequired":"请选择开始日期和时间"},"frequency":{"daily":"每天","weekly":"每周","monthly":"每月"},"weekday":{"sun":"周日","mon":"周一","tue":"周二","wed":"周三","thu":"周四","fri":"周五","sat":"周六"}},
     "languageSwitcher":{"label":"语言","english":"英文","traditionalChinese":"繁体中文","simplifiedChinese":"简体中文"},
     "menu":{"user":"用户","stockAnalysis":"股票分析","dataManagement":"数据管理","jobConfiguration":"任务配置","watchList":"观察列表","unknown":"菜单"},
