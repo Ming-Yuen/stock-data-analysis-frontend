@@ -28,6 +28,7 @@ export interface StockSnapshot {
   epsCalculationMethod?: string;
   nextEarningsDate?: string;
   postFilingEventDate?: string;
+  postFilingEventSubtype?: string;
   postFilingEventTitle?: string;
   postFilingEventDescription?: string;
   industry?: string;

@@ -19,7 +19,9 @@ interface JobCreatePageProps {
 
 interface CronSchedule {
   selectedDays: number[];
-  startDateTime: string;
+  dayOfMonth: string;
+  scheduleTime: string;
+  startDate: string;
   frequency: "daily" | "weekly" | "monthly";
   endDate?: string;
 }
@@ -58,7 +60,7 @@ const scheduleFromJob = (job?: Job): CronSchedule => {
   const frequency: CronSchedule["frequency"] =
     dayOfWeek && dayOfWeek !== "?" && dayOfWeek !== "*"
       ? "weekly"
-      : dayOfMonth === "1"
+      : dayOfMonth && dayOfMonth !== "*" && dayOfMonth !== "?"
         ? "monthly"
         : "daily";
   const selectedDays = frequency === "weekly"
@@ -71,7 +73,9 @@ const scheduleFromJob = (job?: Job): CronSchedule => {
 
   return {
     selectedDays,
-    startDateTime: job?.startTime?.slice(0, 16) ?? `${new Date().toISOString().slice(0, 10)}T${cronTime}`,
+    dayOfMonth: frequency === "monthly" ? dayOfMonth : "1",
+    scheduleTime: cronTime,
+    startDate: job?.startTime?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
     frequency,
     endDate: job?.endTime?.slice(0, 10) ?? "",
   };
@@ -91,7 +95,6 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
     handleSubmit,
     formState: { errors },
     watch,
-    setValue,
   } = useForm<JobFormData>({
     defaultValues: {
       jobName: job?.jobName ?? "",
@@ -105,7 +108,6 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
   });
 
   const frequency = watch("cronSchedule.frequency");
-  const selectedDays = watch("cronSchedule.selectedDays");
 
   const taskGroupOptions: { label: string; value: TaskGroup }[] = [
     // 可以重新啟用這些選項
@@ -115,25 +117,16 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
   ];
 
   const generateCronExpression = (schedule: CronSchedule): string => {
-    if (!schedule.startDateTime) return "";
-    const [, time = ""] = schedule.startDateTime.split("T");
-    const [hours, minutes] = time.split(":").map(Number);
+    if (!schedule.scheduleTime) return "";
+    const [hours, minutes] = schedule.scheduleTime.split(":").map(Number);
     if (schedule.frequency === "daily") return `0 ${minutes} ${hours} * * ?`;
     if (schedule.frequency === "weekly") {
       if (schedule.selectedDays.length === 0) return "";
       const quartzDays = schedule.selectedDays.map((day) => (day === 0 ? 1 : day + 1)).join(",");
       return `0 ${minutes} ${hours} ? * ${quartzDays}`;
     }
-    if (schedule.frequency === "monthly") return `0 ${minutes} ${hours} 1 * ?`;
+    if (schedule.frequency === "monthly") return `0 ${minutes} ${hours} ${schedule.dayOfMonth} * ?`;
     return "";
-  };
-
-  const handleDayToggle = (day: number) => {
-    const currentDays = [...selectedDays];
-    const index = currentDays.indexOf(day);
-    if (index > -1) currentDays.splice(index, 1);
-    else currentDays.push(day);
-    setValue("cronSchedule.selectedDays", currentDays.sort());
   };
 
   const onSubmit = async (data: JobFormData) => {
@@ -152,8 +145,8 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
         jobClassPath: data.jobClassPath,
         jobParams: jobParams,
         cronExpression,
-        startTime: data.cronSchedule.startDateTime
-          ? `${data.cronSchedule.startDateTime}:00`
+        startTime: data.cronSchedule.startDate
+          ? `${data.cronSchedule.startDate}T00:00:00`
           : null,
         endTime: data.cronSchedule.endDate ? `${data.cronSchedule.endDate}T23:59:59` : null,
         activeStatus: data.activeStatus,
@@ -325,46 +318,88 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
               </FormField>
             </Grid>
 
-            {/* Start Date Time */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label={t("job.form.startDateTime")} required error={errors.cronSchedule?.startDateTime?.message}>
-                <Controller name="cronSchedule.startDateTime" control={control} rules={{ required: t("job.validation.startDateTimeRequired") }} render={({ field }) => <TextField {...field} type="datetime-local" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.startDateTime} />} />
-              </FormField>
-            </Grid>
-
-            {/* End Date */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label={t("job.form.endDateOptional")}>
-                <Controller name="cronSchedule.endDate" control={control} render={({ field }) => <TextField {...field} type="date" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth />} />
-              </FormField>
-            </Grid>
-
             {/* Select Days */}
             {frequency === "weekly" && (
               <Grid size={12}>
-                <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 100, pt: 0.5 }}>
-                    {t("job.form.selectDays")}
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", flex: 1 }}>
-                    {[
-                      { label: t("job.weekday.sun"), value: 0 },
-                      { label: t("job.weekday.mon"), value: 1 },
-                      { label: t("job.weekday.tue"), value: 2 },
-                      { label: t("job.weekday.wed"), value: 3 },
-                      { label: t("job.weekday.thu"), value: 4 },
-                      { label: t("job.weekday.fri"), value: 5 },
-                      { label: t("job.weekday.sat"), value: 6 },
-                    ].map((day) => (
-                      <Box key={day.value} sx={{ display: "flex", alignItems: "center", border: "1px solid #e0e0e0", borderRadius: 1, px: 1.5, py: 0.5, cursor: "pointer", bgcolor: selectedDays.includes(day.value) ? "#e3f2fd" : "transparent", "&:hover": { bgcolor: selectedDays.includes(day.value) ? "#bbdefb" : "#f5f5f5" } }} onClick={() => handleDayToggle(day.value)}>
-                        <Checkbox checked={selectedDays.includes(day.value)} size="small" sx={{ p: 0, mr: 0.5 }} />
-                        <Typography variant="body2">{day.label}</Typography>
+                <Controller
+                  name="cronSchedule.selectedDays"
+                  control={control}
+                  rules={{ validate: (value) => value.length > 0 || t("job.form.selectDays") }}
+                  render={({ field }) => (
+                    <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 100, pt: 0.5 }}>
+                        {t("job.form.selectDays")}<span style={{ color: "#d32f2f", marginLeft: 4 }}>*</span>
+                      </Typography>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                          {[
+                            { label: t("job.weekday.sun"), value: 0 },
+                            { label: t("job.weekday.mon"), value: 1 },
+                            { label: t("job.weekday.tue"), value: 2 },
+                            { label: t("job.weekday.wed"), value: 3 },
+                            { label: t("job.weekday.thu"), value: 4 },
+                            { label: t("job.weekday.fri"), value: 5 },
+                            { label: t("job.weekday.sat"), value: 6 },
+                          ].map((day) => {
+                            const checked = field.value.includes(day.value);
+                            return (
+                              <Box key={day.value} sx={{ display: "flex", alignItems: "center", border: "1px solid #e0e0e0", borderRadius: 1, px: 1.5, py: 0.5, cursor: "pointer", bgcolor: checked ? "#e3f2fd" : "transparent", "&:hover": { bgcolor: checked ? "#bbdefb" : "#f5f5f5" } }} onClick={() => field.onChange(checked ? field.value.filter((value) => value !== day.value) : [...field.value, day.value].sort())}>
+                                <Checkbox checked={checked} size="small" sx={{ p: 0, mr: 0.5 }} />
+                                <Typography variant="body2">{day.label}</Typography>
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                        {errors.cronSchedule?.selectedDays?.message && <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>{errors.cronSchedule.selectedDays.message}</Typography>}
                       </Box>
-                    ))}
-                  </Box>
-                </Box>
+                    </Box>
+                  )}
+                />
               </Grid>
             )}
+
+            {/* Day of month */}
+            {frequency === "monthly" && (
+              <Grid size={{ xs: 12, md: 4 }}>
+                <FormField label={t("jobSchedule.dayOfMonth")} required error={errors.cronSchedule?.dayOfMonth?.message}>
+                  <Controller
+                    name="cronSchedule.dayOfMonth"
+                    control={control}
+                    rules={{
+                      required: t("jobSchedule.dayOfMonthRequired"),
+                      min: { value: 1, message: t("jobSchedule.dayOfMonthRange") },
+                      max: { value: 31, message: t("jobSchedule.dayOfMonthRange") },
+                    }}
+                    render={({ field }) => (
+                      <TextField {...field} type="number" slotProps={{ htmlInput: { min: 1, max: 31 } }} size="small" fullWidth error={!!errors.cronSchedule?.dayOfMonth} />
+                    )}
+                  />
+                </FormField>
+              </Grid>
+            )}
+
+            {/* Schedule Time */}
+            <Grid size={{ xs: 12, md: 4 }}>
+              <FormField label={t("job.form.scheduleTime")} required error={errors.cronSchedule?.scheduleTime?.message}>
+                <Controller name="cronSchedule.scheduleTime" control={control} rules={{ required: t("job.validation.scheduleTimeRequired") }} render={({ field }) => <TextField {...field} type="time" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.scheduleTime} />} />
+              </FormField>
+            </Grid>
+
+            {/* Start and end dates */}
+            <Grid size={12}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <FormField label={t("job.form.startDate")} required error={errors.cronSchedule?.startDate?.message}>
+                    <Controller name="cronSchedule.startDate" control={control} rules={{ required: t("job.validation.startDateRequired") }} render={({ field }) => <TextField {...field} type="date" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth error={!!errors.cronSchedule?.startDate} />} />
+                  </FormField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <FormField label={t("job.form.endDateOptional")}>
+                    <Controller name="cronSchedule.endDate" control={control} render={({ field }) => <TextField {...field} type="date" slotProps={{ inputLabel: { shrink: true } }} size="small" fullWidth />} />
+                  </FormField>
+                </Grid>
+              </Grid>
+            </Grid>
 
             {/* Buttons */}
             <Grid size={12}>

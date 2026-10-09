@@ -29,6 +29,31 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   const { data, isLoading, isError, error, refetch } = useFetch<EnquiryJobResponse>(apiConfig.getJobList, { page, pageSize });
   const launchBatchJob = useMutate<ApiResponse>(apiConfig.launchJobList);
 
+  const formatCronExpression = useCallback((value: unknown) => {
+    if (typeof value !== "string") return "-";
+    const parts = value.trim().split(/\s+/);
+    if (parts.length < 6) return value;
+
+    const [, minute, hour, dayOfMonth, , dayOfWeek] = parts;
+    if (!/^\d+$/.test(hour) || !/^\d+$/.test(minute)) return value;
+    const time = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+
+    if (dayOfWeek !== "?" && dayOfWeek !== "*") {
+      const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      const weekdays = dayOfWeek.split(",").map(Number).map((quartzDay) => {
+        const index = quartzDay === 1 ? 0 : quartzDay - 1;
+        return weekdayKeys[index] ? t(`job.weekday.${weekdayKeys[index]}`) : null;
+      });
+      if (weekdays.some((day) => day === null)) return value;
+      return t("jobSchedule.weeklySummary", { days: weekdays.join("、"), time });
+    }
+    if (dayOfMonth !== "*" && dayOfMonth !== "?") {
+      if (!/^\d+$/.test(dayOfMonth)) return value;
+      return t("jobSchedule.monthlySummary", { day: dayOfMonth, time });
+    }
+    return t("jobSchedule.dailySummary", { time });
+  }, [t]);
+
   const columns: Column[] = useMemo(() => [
     { id: "jobName", label: t("job.columns.taskName"), width: 200 },
     { id: "taskGroup", label: t("job.columns.taskGroup"), width: 200 },
@@ -39,6 +64,14 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
         : value === ActiveStatus.INACTIVE
           ? <span style={{ color: "red" }}>{t("job.status.inactive")}</span>
           : <span style={{ color: "gray" }}>{value || "-"}</span>,
+    },
+    {
+      id: "cronExpression", label: t("job.columns.scheduleTime"), width: 220,
+      render: (value) => formatCronExpression(value),
+    },
+    {
+      id: "startTime", label: t("job.columns.startDate"), width: 140,
+      type: "date", displayDateFormat: "yyyy-MM-dd",
     },
     {
       id: "lastExecutionTime", label: t("job.columns.executionTime"), width: 200,
@@ -67,7 +100,7 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
         </Tooltip>
       ),
     },
-  ], [t]);
+  ], [formatCronExpression, t]);
 
   const handleCreateClick = () => {
     setSelectedJob(null);

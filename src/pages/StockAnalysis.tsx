@@ -144,7 +144,10 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       {stock.postFilingEventTitle && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <Typography sx={{ fontWeight: 700 }}>
-            {stock.postFilingEventDate ? `${stock.postFilingEventDate} · ` : ""}{t("stockAnalysisExtra.postFilingEvent.title")}
+            {stock.postFilingEventDate ? `${stock.postFilingEventDate} · ` : ""}
+            {t("stockAnalysisExtra.postFilingEvent.title", {
+              form: stock.postFilingEventSubtype || "SEC",
+            })}
           </Typography>
           <Typography variant="body2">{t("stockAnalysisExtra.postFilingEvent.description")}</Typography>
         </Alert>
