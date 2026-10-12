@@ -27,9 +27,8 @@ interface CronSchedule {
 }
 
 interface JobFormData {
-  jobName: string;
+  taskCode: string;
   taskGroup: TaskGroup | "";
-  taskDescription: string;
   jobParams: string;
   jobClassPath: string;
   cronSchedule: CronSchedule;
@@ -97,9 +96,8 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
     watch,
   } = useForm<JobFormData>({
     defaultValues: {
-      jobName: job?.jobName ?? "",
+      taskCode: job?.taskCode ?? "",
       taskGroup: job?.taskGroup ?? "",
-      taskDescription: job?.taskDescription ?? "",
       jobParams: JSON.stringify(job?.jobParams ?? {}, null, 2),
       jobClassPath: job?.jobClassPath ?? "",
       cronSchedule: scheduleFromJob(job),
@@ -139,9 +137,9 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
 
       // ✅ 組裝 POST body
       const submitData = {
-        jobName: data.jobName,
+        id: job?.id ?? null,
+        taskCode: data.taskCode,
         taskGroup: data.taskGroup,
-        taskDescription: data.taskDescription, // ✅ 加上 description
         jobClassPath: data.jobClassPath,
         jobParams: jobParams,
         cronExpression,
@@ -221,17 +219,10 @@ export function JobCreatePage({ menuTree, job, onClose }: JobCreatePageProps) {
               </FormField>
             </Grid>
 
-            {/* Task Name */}
+            {/* Task Code */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label={t("job.columns.taskName")} required error={errors.jobName?.message}>
-                <Controller name="jobName" control={control} rules={{ required: t("job.validation.taskNameRequired") }} render={({ field }) => <TextField {...field} disabled={isEditing} error={!!errors.jobName} size="small" fullWidth placeholder={t("job.form.taskNamePlaceholder")} />} />
-              </FormField>
-            </Grid>
-
-            {/* Task Description */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <FormField label={t("job.form.description")}>
-                <Controller name="taskDescription" control={control} render={({ field }) => <TextField {...field} size="small" fullWidth placeholder={t("job.form.descriptionPlaceholder")} />} />
+              <FormField label={t("job.columns.taskCode")} required error={errors.taskCode?.message}>
+                <Controller name="taskCode" control={control} rules={{ required: t("job.validation.taskCodeRequired"), pattern: { value: /^[A-Z][A-Z0-9_]*$/, message: t("job.validation.taskCodeFormat") } }} render={({ field }) => <TextField {...field} disabled={isEditing} error={!!errors.taskCode} size="small" fullWidth placeholder={t("job.form.taskCodePlaceholder")} />} />
               </FormField>
             </Grid>
 

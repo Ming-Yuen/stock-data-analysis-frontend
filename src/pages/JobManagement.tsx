@@ -55,7 +55,11 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   }, [t]);
 
   const columns: Column[] = useMemo(() => [
-    { id: "jobName", label: t("job.columns.taskName"), width: 200 },
+    { id: "taskCode", label: t("job.columns.taskCode"), width: 260 },
+    {
+      id: "description", label: t("job.columns.description"), width: 380,
+      render: (value, row: Job) => t(`job.description.${row.taskCode}`, { defaultValue: "-" }),
+    },
     { id: "taskGroup", label: t("job.columns.taskGroup"), width: 200 },
     {
       id: "activeStatus", label: t("job.columns.active"), type: "select", width: 120,
@@ -92,7 +96,7 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
         <Tooltip title={t("job.actions.run")}>
           <span>
             <IconButton color="primary" size="small" onClick={() => launchBatchJob.mutate({
-              jobName: row.jobName, jobParams: row.jobParams, taskGroup: row.taskGroup,
+              taskCode: row.taskCode, jobParams: row.jobParams, taskGroup: row.taskGroup,
             })} disabled={launchBatchJob.isPending}>
               <PlayArrow />
             </IconButton>

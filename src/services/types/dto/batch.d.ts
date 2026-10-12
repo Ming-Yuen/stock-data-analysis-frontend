@@ -1,23 +1,25 @@
 import { ApiResponse } from "./apiResponse";
+import { ActiveStatus } from "../enums/ActiveStatus";
+
+export type TaskGroup = "TEMP" | "SCHEDULE" | "BATCH" | "REPORT";
 
 export interface LaunchJobRequest<T> {
-  jobName: string;
-  config: T;
+  taskCode: string;
+  jobParams: T;
+  taskGroup: TaskGroup;
 }
 
 export interface EnquiryJobRequest extends Record<string, unknown> {
-  jobName: string;
+  taskCode?: string;
   page?: number;
   pageSize?: number;
 }
 
-export type TaskGroup = "TEMP" | "SCHEDULE" | "BATCH" | "REPORT";
-
 export interface Job {
-  jobName: string;
+  id: number;
+  taskCode: string;
   taskGroup: TaskGroup;
   jobParams: { [key: string]: any };
-  taskDescription: string;
   jobClassPath: string;
   cronExpression: string;
   startTime?: string;
