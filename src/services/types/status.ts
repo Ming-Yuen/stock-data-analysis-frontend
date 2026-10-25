@@ -5,6 +5,9 @@ interface StatusDef {
 
 // 2）定义一个常量对象，键当成枚举名用
 export const JobStatus = {
+  PENDING: { code: "PENDING", label: "Pending" },
+  PROCESSING: { code: "PROCESSING", label: "Processing" },
+  PARTIAL: { code: "PARTIAL", label: "Partial" },
   COMPLETED: { code: "COMPLETED", label: "Completed" },
   FAILED: { code: "FAILED", label: "Failed" },
   RUNNING: { code: "RUNNING", label: "Running" },

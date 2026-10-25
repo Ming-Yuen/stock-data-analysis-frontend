@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box } from "@mui/material";
 import { useFetch, useMutate } from "../hooks/api/useApi";
 import { apiConfig } from "../apiConfig";
@@ -8,7 +9,6 @@ import { MenuTree } from "../services/types/dto/menu";
 import { WatchItem, WatchlistEnquiryResponse } from "../services/types/dto/watchlist";
 import { useTranslation } from "react-i18next";
 import { StockClassificationResponse } from "../services/types/dto/stock";
-import { StockAnalysisPage } from "./StockAnalysis";
 
 interface WatchListPageProps {
   menuTree: MenuTree;
@@ -33,9 +33,9 @@ type SearchState = {
 export function WatchListPage({ menuTree }: WatchListPageProps) {
   const [pageSize] = useState(10);
   const [allData, setAllData] = useState<WatchItem[]>([]);
-  const [selectedStock, setSelectedStock] = useState<WatchItem | null>(null);
 
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const initializedRef = useRef(false);
 
   const [rawClassificationData, setRawClassificationData] = useState<StockClassificationTree[]>([]);
@@ -169,10 +169,6 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
     initializedRef.current = true;
   }, [handleSearch]);
 
-  if (selectedStock) {
-    return <StockAnalysisPage stock={selectedStock} onClose={() => setSelectedStock(null)} />;
-  }
-
   return (
     <Box
       sx={{
@@ -192,7 +188,7 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
         enableInfiniteScroll={false}
         onSearch={handleSearch}
         onSearchFieldChange={handleSearchFieldChange}
-        onRowDoubleClick={(row) => setSelectedStock(row as WatchItem)}
+        onRowDoubleClick={(row) => navigate(`/stockAnalysis/${encodeURIComponent((row as WatchItem).figi)}`)}
       />
     </Box>
   );

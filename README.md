@@ -2,6 +2,14 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## 股票分析 API
+
+分析頁面透過 `POST /analysis/report` 取得後端即時計算結果。請求使用 `figi`、`horizon`、`positionSelection` 與可選的帳戶風險資料；未提供 `analysisAsOf` 時由後端決定分析時間。
+
+前端請求型別位於 `src/services/types/dto/analysis.ts`，須與後端 `AnalysisReportRequest` 同步。回應 `data` 只包含 `report`，其 context 包含 `analysisAsOf` 和 `knowledgeAsOf`。不傳送已移除的 `mode`／`persistSnapshot`，也不提供舊 snapshot／replay 操作；`snapshotId` 僅為後端相容欄位，不代表仍有快照 API。
+
+持倉與帳戶風險輸入保留，由後端決定分析資格與交易建議；前端不自行補算缺失的分析數值。
+
 ## Available Scripts
 
 In the project directory, you can run:

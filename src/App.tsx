@@ -1,6 +1,6 @@
 // src/App.tsx
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Layout from "./layouts/layout";
 import { JobManagementPage } from "./pages/JobManagement";
 import { useFetch } from "./hooks/api/useApi";
@@ -8,6 +8,7 @@ import { apiConfig } from "./apiConfig";
 import { WatchListPage } from "./pages/Watchlist";
 import { MenuTree, MenuEnquiryResponse } from "./services/types/dto/menu";
 import HomeDashboard from "./pages/HomeDashboard";
+import { StockAnalysisPage } from "./pages/StockAnalysis";
 
 // 页面配置接口
 interface PageConfig {
@@ -25,7 +26,7 @@ const PAGE_CONFIG_MAP: Record<string, PageConfig> = {
   "/watchlist": { component: WatchListPage },
   // 在这里添加更多页面映射
   // 'stockAnalysis': { component: StockAnalysisPage },
-  // '/stockAnalysis': { component: StockAnalysisPage },
+  "/stockAnalysis": { component: WatchListPage },
   // 'userManagement': { component: UserManagementPage },
   // '/userManagement': { component: UserManagementPage },
   // 'dataManagement': { component: DataManagementPage },
@@ -91,6 +92,8 @@ const App: React.FC = () => {
       <Route path="/" element={<Layout menuData={menuTrees} />}>
         {/* 动态生成的路由 */}
         {generateRoutes(menuTrees)}
+
+        <Route path="stockAnalysis/:figi" element={<StockAnalysisPage />} />
 
         {/* 404 */}
         <Route path="*" element={<div>頁面不存在</div>} />

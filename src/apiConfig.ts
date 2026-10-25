@@ -3,7 +3,7 @@ export interface ApiEndpoint {
   url: string;
 }
 
-type ApiKey = "getMenu" | "updateSearchCriteriaConfig" | "getSearchCriteriaConfig" | "getJobList" | "launchJobList" | "getWatchList" | "updateWatchList" | "getStockClassifications"| "overview_dashboard";
+type ApiKey = "getMenu" | "updateSearchCriteriaConfig" | "getSearchCriteriaConfig" | "getJobList" | "launchJobList" | "getWatchList" | "updateWatchList" | "getStockClassifications" | "overview_dashboard" | "analysisReport" | "analysisPositions" | "createPosition" | "updatePosition";
 
 // Step 2：编写配置并用 satisfies 验证
 export const apiConfig = {
@@ -43,6 +43,10 @@ export const apiConfig = {
     method: "post",
     url: process.env.REACT_APP_OVERVIEW_DASHBOARD!,
   },
+  analysisReport: { method: "post", url: "analysis/report" },
+  analysisPositions: { method: "get", url: "analysis/positions" },
+  createPosition: { method: "post", url: "analysis/positions" },
+  updatePosition: { method: "put", url: "analysis/positions/:positionId" },
 } satisfies Record<ApiKey, ApiEndpoint>;
 
 // Step 3：封装调用函数
