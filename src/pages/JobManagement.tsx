@@ -50,11 +50,11 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
       render: (value) => formatQuartzCronExpression(value, t),
     },
     {
-      id: "startTime", label: t("job.columns.startDate"), width: 140,
-      type: "date", displayDateFormat: "yyyy-MM-dd",
+      id: "lastExecStartTime", label: t("job.columns.lastExecStartTime"), width: 200,
+      type: "datetime", displayDateFormat: "yyyy-MM-dd HH:mm:ss",
     },
     {
-      id: "lastExecutionTime", label: t("job.columns.executionTime"), width: 200,
+      id: "lastExecEndTime", label: t("job.columns.lastExecEndTime"), width: 200,
       type: "datetime", displayDateFormat: "yyyy-MM-dd HH:mm:ss",
     },
     {
