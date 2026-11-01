@@ -353,10 +353,6 @@
     "otherObservationPlans": "Other observation plans and unmet conditions",
     "observationPlansLimit": "These plans were not selected as preferred. The price levels are observation references, not active buy instructions.",
     "observationPlanNumber": "Observation plan {{number}}",
-    "notSelectedAsPreferred": "This plan has not been selected as the preferred plan.",
-    "savedValuation": "Saved valuation preview",
-    "savedValuationLoading": "These are saved valuation results as of the dates below. Detailed technical analysis is loading; this preview does not provide a current trade recommendation.",
-    "savedValuationReportFailed": "Detailed analysis could not be loaded. The saved valuation below remains a dated reference and does not provide a current trade recommendation.",
-    "knowledgeAsOf": "Knowledge cutoff"
+    "notSelectedAsPreferred": "This plan has not been selected as the preferred plan."
   }
 }

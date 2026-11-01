@@ -3,8 +3,6 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { StockAnalysisPage } from "./StockAnalysis";
 import resources from "../locales/zh-HK.json";
-import { WatchItem } from "../services/types/dto/watchlist";
-import { apiClient } from "../services/apiClient";
 
 jest.mock("@tanstack/react-query", () => ({ useQuery: jest.fn(), useMutation: jest.fn(), useQueryClient: jest.fn() }));
 jest.mock("react-router-dom", () => ({ useNavigate: () => jest.fn(), useParams: () => ({ figi: "AAPL-FIGI" }) }), { virtual: true });
@@ -21,13 +19,9 @@ const available = (value: unknown) => ({ status: "AVAILABLE", value, reasons: []
 const fair = (modelCode: string, low: number, central: number, high: number) => available({ modelCode, low, central, high, status: "AVAILABLE" });
 let valuation: Record<string, any>;
 let report: Record<string, any>;
-let reportPending: boolean;
-let preview: unknown;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  reportPending = false;
-  preview = null;
   valuation = { fairValueRange: fair("PE", 100, 110, 120), industryFairValueRange: fair("EV_EBITDA", 200, 230, 260) };
   report = {
     context: { figi: "AAPL-FIGI", analysisAsOf: "2026-10-30T20:00:00Z", horizon: "SWING" },
@@ -36,11 +30,8 @@ beforeEach(() => {
     valuation: available(valuation), marketContext: unavailable("MARKET_MISSING"), tradePlans: unavailable("PLAN_MISSING"),
     confluenceScenarios: unavailable("CONFLUENCE_MISSING"), positionDecision: unavailable("POSITION_MISSING"),
   };
-  (useQuery as jest.Mock).mockImplementation(({ queryKey }) => {
-    if (queryKey[0] === "analysis-position") return { data: null, isFetched: true };
-    if (queryKey[0] === "analysis-valuation-preview") return { data: preview, isLoading: false };
-    return reportPending ? { isLoading: true, isFetching: true } : { data: { report }, isLoading: false };
-  });
+  (useQuery as jest.Mock).mockImplementation(({ queryKey }) => queryKey[0] === "analysis-position"
+    ? { data: null, isFetched: true } : { data: { report }, isLoading: false });
   (useMutation as jest.Mock).mockReturnValue({ mutate: jest.fn(), isPending: false });
   (useQueryClient as jest.Mock).mockReturnValue({ setQueryData: jest.fn(), invalidateQueries: jest.fn() });
 });
@@ -141,41 +132,4 @@ test("uses backend messages for unknown reasons and keeps market comparison sepa
   expect(range("industry").getByText("來源正在重新核驗")).toBeTruthy();
   expect(screen.getByText("P/E: 22.00×")).toBeTruthy();
   expect(range("industry").queryByText("22.00")).toBeNull();
-});
-
-test("shows saved values while detailed analysis is loading, then replaces them with the report", () => {
-  reportPending = true;
-  preview = { figi: "AAPL-FIGI", quoteDate: "2026-10-30", valuationAnalysisAsOf: "2026-10-30T20:00:00Z", fairValueRange: fair("PE", 80, 90, 95) };
-  const { rerender } = render(<StockAnalysisPage />);
-  const saved = within(screen.getByRole("region", { name: resources.analysisReport.savedValuation }));
-  expect(saved.getByText("80.00 – 95.00 USD")).toBeTruthy();
-  expect(saved.getByText(resources.analysisReport.savedValuationLoading)).toBeTruthy();
-  expect(screen.queryByText(resources.analysisReport.technicalTradePlan)).toBeNull();
-  reportPending = false;
-  rerender(<StockAnalysisPage />);
-  expect(screen.queryByRole("region", { name: resources.analysisReport.savedValuation })).toBeNull();
-  expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
-  expect(screen.queryByText("80.00 – 95.00 USD")).toBeNull();
-});
-
-test("uses a supplied stock cache without an enquiry and supports old stocks without cached fields", () => {
-  reportPending = true;
-  const stock = { figi: "AAPL-FIGI", symbol: "AAPL", fairValueRange: fair("PE", 80, 90, 95) } as unknown as WatchItem;
-  const { rerender } = render(<StockAnalysisPage stock={stock} />);
-  expect(screen.getByRole("region", { name: resources.analysisReport.savedValuation })).toBeTruthy();
-  const options = (useQuery as jest.Mock).mock.calls.find(([query]) => query.queryKey[0] === "analysis-valuation-preview")?.[0];
-  expect(options.enabled).toBe(false);
-  rerender(<StockAnalysisPage stock={{ figi: "AAPL-FIGI", symbol: "AAPL" } as WatchItem} />);
-  expect(screen.queryByRole("region", { name: resources.analysisReport.savedValuation })).toBeNull();
-  expect(screen.getByText(resources.analysisReport.loading)).toBeTruthy();
-});
-
-test("loads the saved preview through a one-stock FIGI enquiry and rejects another FIGI", async () => {
-  reportPending = true;
-  render(<StockAnalysisPage />);
-  const options = (useQuery as jest.Mock).mock.calls.find(([query]) => query.queryKey[0] === "analysis-valuation-preview")?.[0];
-  expect(options.enabled).toBe(true);
-  (apiClient.post as jest.Mock).mockResolvedValue({ data: { success: true, watchItems: [{ figi: "OTHER-FIGI" }] } });
-  expect(await options.queryFn()).toBeNull();
-  expect(apiClient.post).toHaveBeenCalledWith(expect.anything(), { page: 1, pageSize: 1, criteria: { figi: "AAPL-FIGI" } });
 });
