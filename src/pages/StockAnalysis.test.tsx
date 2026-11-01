@@ -116,6 +116,24 @@ test("only shows unselected plans as observation details and does not duplicate 
   expect(observations.getByText(resources.analysisReport.observationPlansLimit)).toBeTruthy();
 });
 
+test("shows backend close confirmation rules for preferred and observation plans without inventing legacy rules", () => {
+  const plan = (planId: string, stop: Record<string, unknown>) => ({ planId, stop, status: "WAITING_TRIGGER", targets: [], reasons: [], riskReward: unavailable("RR_REQUIRED") });
+  report.tradePlans = available({ plans: [
+    plan("chosen", { protectivePrice: 88, closeThreshold: 90, requiredCloses: 3, evaluationTimeframe: "WEEKLY" }),
+    plan("watch-only", { protectivePrice: 78, closeThreshold: 80, requiredCloses: 4, evaluationTimeframe: "DAILY" }),
+    plan("legacy", { protectivePrice: 68, closeThreshold: 70 }),
+  ], currentPrice: 110, priceDataThrough: "2026-10-30" });
+  report.confluenceScenarios = available({ preferredPlanId: "chosen", marketDecision: "WAIT" });
+  render(<StockAnalysisPage />);
+  expect(within(screen.getByRole("region", { name: resources.analysisReport.preferredTechnicalPlan })).getByText("連續 3 個完整週線收市低於此價才確認技術失效。")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: resources.analysisReport.otherObservationPlans }));
+  const observations = within(screen.getByRole("region", { name: resources.analysisReport.otherObservationPlans }));
+  expect(observations.getByText("連續 4 個完整日線收市低於此價才確認技術失效。")).toBeTruthy();
+  expect(observations.getByText("80.00")).toBeTruthy();
+  expect(observations.getByText("70.00")).toBeTruthy();
+  expect(observations.getAllByText(/才確認技術失效/)).toHaveLength(1);
+});
+
 test("shows backend technical descriptions without inferring a crossover", () => {
   report.marketContext = available({ momentum: {}, momentumDetail: { indicators: { MACD: available(2.1), RSI14: unavailable("RSI_WARMUP_REQUIRED") },
     interpretations: { MACD: { code: "MACD_ABOVE_SIGNAL", status: "AVAILABLE", params: { unit: "PRICE", timeframe: "DAILY" }, reasons: [] } } }, market: unavailable("MARKET_UNKNOWN") });

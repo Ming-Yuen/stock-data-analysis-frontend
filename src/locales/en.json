@@ -335,7 +335,7 @@
     "support": "Support zones",
     "resistance": "Resistance zones",
     "testCount": "Tests: {{count}}",
-    "invalidationConfirmation": "Confirmed after {{count}} complete {{timeframe}} closes below the threshold.",
+    "invalidationConfirmation": "Technical invalidation is confirmed only after {{closes}} complete {{timeframe}} closes below this price.",
     "denominatorConvention": "Financial basis",
     "totalDebt": "Debt (USD)",
     "cashLikeAssets": "Cash-like assets (USD)",

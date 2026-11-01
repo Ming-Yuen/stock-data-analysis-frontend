@@ -801,7 +801,7 @@
     "support": "支撑区",
     "resistance": "阻力区",
     "testCount": "测试次数：{{count}}",
-    "invalidationConfirmation": "须连续 {{count}} 个完整{{timeframe}}收盘跌破阈值才确认技术失效。",
+    "invalidationConfirmation": "连续 {{closes}} 个完整{{timeframe}}收市低于此价才确认技术失效。",
     "denominatorConvention": "财务口径",
     "totalDebt": "债务（美元）",
     "cashLikeAssets": "现金类资产（美元）",

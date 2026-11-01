@@ -234,7 +234,7 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
             <Typography>{t("analysisReport.trigger")}: <b>{view.plan.trigger ?? "—"}</b></Typography>
             <Typography>{t("analysisReport.protectiveStop")}: <b>{fmt(view.plan.stop?.protectivePrice)}</b></Typography>
             <Typography>{t("analysisReport.closeInvalidation")}: <b>{fmt(view.plan.stop?.closeThreshold)}</b></Typography>
-            {view.plan.stop?.requiredCloses != null && <Typography variant="body2" color="text.secondary">{t("analysisReport.invalidationConfirmation", { count: view.plan.stop.requiredCloses, timeframe: readableState(t, view.plan.stop.evaluationTimeframe) })}</Typography>}
+            {view.plan.stop?.closeThreshold != null && view.plan.stop.requiredCloses != null && view.plan.stop.requiredCloses > 0 && view.plan.stop.evaluationTimeframe && <Typography variant="body2" color="text.secondary">{t("analysisReport.invalidationConfirmation", { closes: view.plan.stop.requiredCloses, timeframe: readableState(t, view.plan.stop.evaluationTimeframe) })}</Typography>}
             <Typography>{t("analysisReport.profitTargets")}: <b>{view.plan.targets.map((target) => `${fmt(target.price)} (${fmt(target.weight * 100, 0)}%)`).join(" / ") || "—"}</b></Typography>
             <Typography>{t("analysisReport.netRR")}: <b>{fmt(view.rr?.netRR)}</b></Typography>
             {view.plan.validThroughSession && <Typography>{t("analysisReport.entryValidThrough")}: {view.plan.validThroughSession}</Typography>}
@@ -249,6 +249,8 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
                 <Typography sx={{ fontWeight: 700 }}>{t("analysisReport.observationPlanNumber", { number: index + 1 })} · {readableState(t, candidate.status)}</Typography>
                 <Typography>{t("analysisReport.technicalEntry")}: <b>{candidate.entryRange ? `${fmt(candidate.entryRange.lower)} – ${fmt(candidate.entryRange.upper)}` : "—"}</b></Typography>
                 <Typography>{t("analysisReport.protectiveStop")}: <b>{fmt(candidate.stop?.protectivePrice)}</b></Typography>
+                <Typography>{t("analysisReport.closeInvalidation")}: <b>{fmt(candidate.stop?.closeThreshold)}</b></Typography>
+                {candidate.stop?.closeThreshold != null && candidate.stop.requiredCloses != null && candidate.stop.requiredCloses > 0 && candidate.stop.evaluationTimeframe && <Typography variant="body2" color="text.secondary">{t("analysisReport.invalidationConfirmation", { closes: candidate.stop.requiredCloses, timeframe: readableState(t, candidate.stop.evaluationTimeframe) })}</Typography>}
                 <Typography>{t("analysisReport.profitTargets")}: <b>{candidate.targets?.map((target) => `${fmt(target.price)} (${fmt(target.weight * 100, 0)}%)`).join(" / ") || "—"}</b></Typography>
                 <Typography>{t("analysisReport.netRR")}: {fmt(metric(candidate.riskReward)?.netRR)}</Typography>
                 <Typography variant="body2" color="text.secondary">{candidate.reasons?.map((reason) => readableReason(t, reason)).join(" · ") || t("analysisReport.notSelectedAsPreferred")}</Typography>

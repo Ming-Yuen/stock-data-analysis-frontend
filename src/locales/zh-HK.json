@@ -801,7 +801,7 @@
     "support": "支撐區",
     "resistance": "阻力區",
     "testCount": "測試次數：{{count}}",
-    "invalidationConfirmation": "須連續 {{count}} 個完整{{timeframe}}收盤跌破閾值才確認技術失效。",
+    "invalidationConfirmation": "連續 {{closes}} 個完整{{timeframe}}收市低於此價才確認技術失效。",
     "denominatorConvention": "財務口徑",
     "totalDebt": "債務（美元）",
     "cashLikeAssets": "現金類資產（美元）",
