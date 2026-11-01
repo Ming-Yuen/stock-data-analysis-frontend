@@ -1,4 +1,5 @@
 import { ApiResponse } from "./apiResponse";
+import { FairValueRange, MetricResult } from "./analysis";
 
 export interface StockSnapshotResponse extends ApiResponse {
   stockSnapshots: StockSnapshot[];
@@ -34,6 +35,10 @@ export interface StockSnapshot {
   classificationCode?: string | null;
   sector?: string | null;
   valuationIndustry?: string | null;
+  fairValueRange?: MetricResult<FairValueRange> | null;
+  industryFairValueRange?: MetricResult<FairValueRange> | null;
+  valuationAnalysisAsOf?: string | null;
+  valuationKnowledgeAsOf?: string | null;
 }
 
 export interface StockClassification {

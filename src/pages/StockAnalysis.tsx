@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip, CircularProgress, Divider, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack, TextField, Typography } from "@mui/material";
 import { ArrowBack, ExpandMore, ShowChart } from "@mui/icons-material";
-import { WatchItem } from "../services/types/dto/watchlist";
+import { WatchItem, WatchlistEnquiryResponse } from "../services/types/dto/watchlist";
 import { apiClient } from "../services/apiClient";
 import { apiConfig } from "../apiConfig";
 import { useTranslation } from "react-i18next";
@@ -90,6 +90,18 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
   const report: StockAnalysisReport | null = reportQuery.data?.report ?? null;
   const loading = reportQuery.isLoading || (reportQuery.isFetching && report == null);
   const error = reportQuery.isError ? apiErrorMessage(reportQuery.error, "Analysis unavailable") : null;
+  const hasSavedValuation = (item?: WatchItem | null) => item?.fairValueRange !== undefined || item?.industryFairValueRange !== undefined;
+  const suppliedPreview = stock?.figi === figi && hasSavedValuation(stock) ? stock : null;
+  const valuationPreviewQuery = useQuery<WatchItem | null>({
+    queryKey: ["analysis-valuation-preview", figi],
+    enabled: Boolean(figi) && !report && !suppliedPreview,
+    queryFn: async () => {
+      const { data } = await apiClient.post<WatchlistEnquiryResponse>(apiConfig.getWatchList.url, { page: 1, pageSize: 1, criteria: { figi } });
+      if (!data.success) throw new Error(data.message || "VALUATION_PREVIEW_UNAVAILABLE");
+      return data.watchItems?.find((item) => item.figi === figi) ?? null;
+    },
+  });
+  const savedValuation = suppliedPreview ?? valuationPreviewQuery.data;
 
   useEffect(() => {
     const currentBasis = metric(report?.normalizedPrice)?.priceBasis?.basisId;
@@ -195,6 +207,17 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       </Stack>
     </Stack>
 
+    {!report && savedValuation && hasSavedValuation(savedValuation) && <Paper component="section" aria-label={t("analysisReport.savedValuation")} variant="outlined" sx={{ p: 3, mb: 2 }}>
+      <Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.savedValuation")}</Typography>
+      <Alert severity="info" sx={{ my: 2 }}>{t(error ? "analysisReport.savedValuationReportFailed" : "analysisReport.savedValuationLoading")}</Alert>
+      <Typography variant="body2" color="text.secondary">{t("analysisReport.priceDataThrough")}: {savedValuation.quoteDate || "—"}</Typography>
+      <Typography variant="body2" color="text.secondary">{t("analysisReport.analysisAsOf")}: {savedValuation.valuationAnalysisAsOf ?? "—"}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t("analysisReport.knowledgeAsOf")}: {savedValuation.valuationKnowledgeAsOf ?? "—"}</Typography>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}><FairValuePanel title={t("analysisReport.historicalFairValue")} result={savedValuation.fairValueRange} fallbackStatus="INSUFFICIENT_DATA" fallbackReasons={[]} /></Grid>
+        <Grid size={{ xs: 12, md: 6 }}><FairValuePanel title={t("analysisReport.industryFairValue")} result={savedValuation.industryFairValueRange} fallbackStatus="INSUFFICIENT_DATA" fallbackReasons={[]} industry /></Grid>
+      </Grid>
+    </Paper>}
     {loading && <Paper variant="outlined" sx={{ p: 4, textAlign: "center" }}><CircularProgress size={28} /><Typography sx={{ mt: 1 }}>{t("analysisReport.loading")}</Typography></Paper>}
     {error && <Alert severity="error">{error}</Alert>}
     {!loading && !error && report && view && <>

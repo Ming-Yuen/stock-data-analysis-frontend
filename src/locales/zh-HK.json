@@ -819,6 +819,10 @@
     "otherObservationPlans": "其他觀察計劃及未成立原因",
     "observationPlansLimit": "以下計劃未被選為首選，價位只作條件觀察，不代表目前可買入。",
     "observationPlanNumber": "觀察計劃 {{number}}",
-    "notSelectedAsPreferred": "此計劃尚未被選為首選計劃。"
+    "notSelectedAsPreferred": "此計劃尚未被選為首選計劃。",
+    "savedValuation": "已保存估值預覽",
+    "savedValuationLoading": "以下是截至所列日期的已保存估值。詳細技術分析載入中；此預覽不提供目前可執行的交易建議。",
+    "savedValuationReportFailed": "詳細分析未能載入。以下已保存估值只作所列日期的參考，不提供目前可執行的交易建議。",
+    "knowledgeAsOf": "資料知識截止"
   }
 }
