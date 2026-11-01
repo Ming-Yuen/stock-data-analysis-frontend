@@ -14,20 +14,11 @@ interface WatchListPageProps {
   menuTree: MenuTree;
 }
 
-type StockClassificationTree = {
-  industry: string;
-  categories: {
-    category: string;
-    subCategories: string[];
-  }[];
-};
-
 type Option = { label: string; value: string };
 
 type SearchState = {
-  industry: string;
-  category: string;
-  subCategory: string;
+  sector: string;
+  valuationIndustry: string;
 };
 
 export function WatchListPage({ menuTree }: WatchListPageProps) {
@@ -38,11 +29,9 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   const navigate = useNavigate();
   const initializedRef = useRef(false);
 
-  const [rawClassificationData, setRawClassificationData] = useState<StockClassificationTree[]>([]);
   const [searchState, setSearchState] = useState<SearchState>({
-    industry: "",
-    category: "",
-    subCategory: "",
+    sector: "",
+    valuationIndustry: "",
   });
 
   const stockSearch = useMutate<WatchlistEnquiryResponse, any>(
@@ -63,58 +52,21 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
     apiConfig.getStockClassifications
   );
 
-  useEffect(() => {
-    setRawClassificationData(classificationResp?.stockClassificationTrees ?? []);
-  }, [classificationResp]);
-
-  const industryOptions = useMemo<Option[]>(() => {
-    const setIndustry = new Set<string>();
-    rawClassificationData.forEach((tree) => {
-      if (tree.industry) {
-        setIndustry.add(tree.industry);
-      }
-    });
-    return Array.from(setIndustry).map((v) => ({ label: v, value: v }));
-  }, [rawClassificationData]);
-
-  const categoryOptions = useMemo<Option[]>(() => {
-    const setCategory = new Set<string>();
-
-    rawClassificationData
-      .filter((tree) => !searchState.industry || tree.industry === searchState.industry)
-      .forEach((tree) => {
-        tree.categories?.forEach((categoryNode) => {
-          if (categoryNode.category) {
-            setCategory.add(categoryNode.category);
-          }
-        });
-      });
-
-    return Array.from(setCategory).map((v) => ({ label: v, value: v }));
-  }, [rawClassificationData, searchState.industry]);
-
-  const subCategoryOptions = useMemo<Option[]>(() => {
-    const setSubCategory = new Set<string>();
-
-    rawClassificationData
-      .filter((tree) => !searchState.industry || tree.industry === searchState.industry)
-      .forEach((tree) => {
-        tree.categories
-          ?.filter(
-            (categoryNode) =>
-              !searchState.category || categoryNode.category === searchState.category
-          )
-          .forEach((categoryNode) => {
-            categoryNode.subCategories?.forEach((subCategory) => {
-              if (subCategory) {
-                setSubCategory.add(subCategory);
-              }
-            });
-          });
-      });
-
-    return Array.from(setSubCategory).map((v) => ({ label: v, value: v }));
-  }, [rawClassificationData, searchState.industry, searchState.category]);
+  const classificationOptions = useMemo(() => {
+    const dictionary = classificationResp?.classifications ?? [];
+    const optionsFor = (field: keyof SearchState, parents: (keyof SearchState)[]): Option[] => {
+      const names = dictionary
+        .filter((row) => parents.every((parent) => !searchState[parent] || row[parent] === searchState[parent]))
+        .map((row) => row[field])
+        .filter(Boolean);
+      return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b))
+        .map((name) => ({ label: name, value: name }));
+    };
+    return {
+      sector: optionsFor("sector", []),
+      valuationIndustry: optionsFor("valuationIndustry", ["sector"]),
+    };
+  }, [classificationResp, searchState]);
 
   const columns: Column[] = useMemo(
     () => [
@@ -128,16 +80,15 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       },
       { id: "symbol", type: "text", label: t("watchlist.columns.symbol"), width: 200, uppercase: true, },
       { id: "stockType", type: "select", label: t("watchlist.columns.stockType"), width: 200, uppercase: true, },
-      { id: "industry", type: "select", label: t("watchlist.columns.industry"), width: 200, translateValue: true, selectOptions: industryOptions, },
-      { id: "category", type: "select", label: t("watchlist.columns.category"), width: 200, translateValue: true, selectOptions: categoryOptions, },
-      { id: "subCategory", type: "select", label: t("watchlist.columns.subCategory"), width: 200, translateValue: true, selectOptions: subCategoryOptions, },
+      { id: "sector", type: "select", label: t("watchlist.columns.sector"), width: 200, selectOptions: classificationOptions.sector, },
+      { id: "valuationIndustry", type: "select", label: t("watchlist.columns.valuationIndustry"), width: 200, selectOptions: classificationOptions.valuationIndustry, },
       { id: "quoteDate", type: "date", label: t("watchlist.columns.quoteDate"), width: 200, displayDateFormat: "yyyy-MM-dd", },
       { id: "closePrice", type: "number", label: t("watchlist.columns.closePrice"), width: 200, },
       { id: "pe", type: "number", label: t("watchlist.columns.pe"), width: 200, },
       { id: "rsi14", type: "number", label: "RSI (14D)", width: 200, },
       { id: "cashPerShare", type: "number", label: t("watchlist.columns.cashPerShare"), width: 200, },
     ],
-    [t, updateWatchList, industryOptions, categoryOptions, subCategoryOptions]
+    [t, updateWatchList, classificationOptions]
   );
 
   const handleSearch = useCallback(
@@ -155,9 +106,8 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   const handleSearchFieldChange = useCallback(
     (fieldId: string, value: any, allValues: Record<string, any>) => {
       setSearchState({
-        industry: String(allValues.industry ?? ""),
-        category: String(allValues.category ?? ""),
-        subCategory: String(allValues.subCategory ?? ""),
+        sector: String(allValues.sector ?? ""),
+        valuationIndustry: String(allValues.valuationIndustry ?? ""),
       });
     },
     []

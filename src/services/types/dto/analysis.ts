@@ -59,6 +59,7 @@ export interface FairValueRange { modelCode: string; low: number; central: numbe
 export interface HistoricalValuation {
   currentPrice: number; priceDate: string; basisId: string; priceBasis?: PriceBasisDescriptor | null;
   currentRatios: Record<string, MetricResult<number>>; fairValueRange: MetricResult<FairValueRange>;
+  industryFairValueRange?: MetricResult<FairValueRange> | null;
   eligibility: EligibilityStatus; reasons: AnalysisReason[]; availableAt?: string | null; observedAt?: string | null;
 }
 export interface MomentumVolume { rsi14: MetricResult<number>; momentumSignal: MetricResult<number>; macd: MetricResult<number>; macdSignal: MetricResult<number>; volumeVs20Day: MetricResult<number>; volumeSignal: MetricResult<number>; drawdownFrom252High: MetricResult<number>; return20: MetricResult<number>; return60: MetricResult<number>; }

@@ -135,7 +135,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     columns.forEach((col) => {
       if (col.type !== "select") return;
 
-      if (col.selectOptions && col.selectOptions.length > 0) {
+      if (col.selectOptions) {
         result[col.id] = col.selectOptions.map((opt) => {
           const normalizedValue = normalizeOptionValue(opt.value, col.uppercase);
           return {
@@ -226,11 +226,8 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     setSearchValues((prev) => {
       const next: SearchValuesState = { ...prev };
 
-      if (columnId === "industry") {
-        next["category"] = "";
-        next["subCategory"] = "";
-      } else if (columnId === "category") {
-        next["subCategory"] = "";
+      if (columnId === "sector") {
+        next["valuationIndustry"] = "";
       }
 
       next[columnId] = v;

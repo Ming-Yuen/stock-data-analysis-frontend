@@ -106,12 +106,11 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const currentPrice = tradePlans?.currentPrice ?? priceSeries?.bars?.[priceSeries.bars.length - 1]?.close ?? null;
     const levels = metric(report.supportResistance);
     const valuation = metric(report.valuation);
-    const fairValue = valuation ? metric(valuation.fairValueRange) : null;
     const rr = plan ? metric(plan.riskReward) : null;
     const market = metric(report.marketContext);
     const position = metric(report.positionDecision);
     const priceDataThrough = tradePlans?.priceDataThrough ?? structure?.priceDataThrough ?? report.eligibility.priceDataThrough ?? null;
-    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, fairValue, plan, rr, market, confluence, position };
+    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, plan, rr, market, confluence, position };
   }, [report]);
 
   const applyAccountRisk = () => {
@@ -238,9 +237,29 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
         </Paper></Grid>
 
         <Grid size={{ xs: 12, md: 6 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.valuation")}</Typography><Divider sx={{ my: 2 }} />
-          {view.fairValue ? <Stack spacing={1}><Typography>Model: <b>{view.fairValue.modelCode}</b></Typography><Typography>Fair value: <b>{fmt(view.fairValue.low)} – {fmt(view.fairValue.high)}</b></Typography><Typography>Central: <b>{fmt(view.fairValue.central)}</b></Typography></Stack>
-            : <Typography color="text.secondary">{report.valuation.status === "AVAILABLE" ? view.valuation?.fairValueRange?.reasons?.[0]?.code ?? "Fair value unavailable" : report.valuation.reasons?.[0]?.code ?? report.valuation.status}</Typography>}
+          {[
+            { key: "historicalFairValue", result: view.valuation?.fairValueRange, centralLabel: "fairValueCentral" },
+            { key: "industryFairValue", result: view.valuation?.industryFairValueRange, centralLabel: "rangeMidpoint" },
+          ].map((range, index) => {
+            const value = metric(range.result);
+            const status = range.result?.status ?? (report.valuation.status === "AVAILABLE" ? "INSUFFICIENT_DATA" : report.valuation.status);
+            const reasons = range.result?.reasons?.length ? range.result.reasons : report.valuation.reasons;
+            return <Box component="section" key={range.key} aria-label={t(`analysisReport.${range.key}`)}>
+              {index > 0 && <Divider sx={{ my: 2 }} />}
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{t(`analysisReport.${range.key}`)}</Typography>
+              <Stack spacing={1} sx={{ mt: 2 }}>
+                {value ? <>
+                  <Typography>{t("analysisReport.valuationModel")}: <b>{value.modelCode}</b></Typography>
+                  <Typography>{t("analysisReport.fairValueRange")}: <b>{fmt(value.low)} – {fmt(value.high)}</b></Typography>
+                  <Typography>{t(`analysisReport.${range.centralLabel}`)}: <b>{fmt(value.central)}</b></Typography>
+                </> : <>
+                  <Typography color="text.secondary">{t("analysisReport.metricStatus")}: {status}</Typography>
+                  <Typography color="text.secondary">{reasons?.map((reason) => reason.code).join(" · ") || t("analysisReport.fairValueUnavailable")}</Typography>
+                </>}
+                {range.key === "industryFairValue" && <Typography variant="body2" color="text.secondary">{t("analysisReport.industryFairValueDescription")}</Typography>}
+              </Stack>
+            </Box>;
+          })}
         </Paper></Grid>
       </Grid>
 

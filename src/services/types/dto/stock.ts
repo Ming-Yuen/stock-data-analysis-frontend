@@ -31,29 +31,17 @@ export interface StockSnapshot {
   postFilingEventSubtype?: string;
   postFilingEventTitle?: string;
   postFilingEventDescription?: string;
-  industry?: string;
-  category?: string;
-  subCategory?: string;
+  classificationCode?: string | null;
+  sector?: string | null;
+  valuationIndustry?: string | null;
 }
 
-// export interface StockClassification {
-//   industry: string;
-//   category: string;
-//   subCategory: string;
-// }
-
-// export interface StockClassificationResponse {
-//   stockClassifications: StockClassification[];
-// }
-
-export interface StockClassificationTree {
-  industry: string;
-  categories: {
-    category: string;
-    subCategories: string[];
-  }[];
+export interface StockClassification {
+  code: string;
+  sector: string;
+  valuationIndustry: string;
 }
 
 export interface StockClassificationResponse {
-  stockClassificationTrees: StockClassificationTree[];
+  classifications: StockClassification[];
 }
