@@ -64,9 +64,15 @@ export interface FairValueRange {
   observation?: ValuationObservation | null;
 }
 export interface IndustryMarketReference {
-  classificationCode: string; valuationIndustry: string; primaryValuationMetric?: string | null;
+  classificationCode: string | null; valuationIndustry: string | null; primaryValuationMetric?: string | null;
   marketAsOf?: string | null; peMedian?: number | null; pbMedian?: number | null; psMedian?: number | null; evEbitdaMedian?: number | null;
   status: MetricStatus; reasonCode?: string | null; method?: string;
+  metrics?: Record<string, IndustryMarketMetric>;
+  priceRange?: MetricResult<FairValueRange> | null;
+}
+export interface IndustryMarketMetric {
+  q25: number | null; median: number | null; q75: number | null;
+  companyCount: number; sampleCount: number; status: MetricStatus;
 }
 export interface HistoricalValuation {
   currentPrice: number; priceDate: string; basisId: string; priceBasis?: PriceBasisDescriptor | null;

@@ -6,6 +6,7 @@ import { TFunction } from "i18next";
 import { AnalysisReason, FairValueRange, IndustryMarketReference, MetricResult, MetricStatus, MomentumAnalysis, MomentumVolume } from "../services/types/dto/analysis";
 
 const number = (value?: number | null) => value == null || !Number.isFinite(value) ? "—" : value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const metricLabels: Record<string, string> = { PE: "P/E", PB: "P/B", PS: "P/S", EV_EBITDA: "EV/EBITDA" };
 export const readableState = (t: TFunction, code?: string | null) => code
   ? t(`analysisReport.states.${code}`, { defaultValue: t("analysisReport.stateUnknown") }) : t("analysisReport.stateUnknown");
 export const readableReason = (t: TFunction, reason: AnalysisReason) => t(`analysisReport.reasons.${reason.code}`,
@@ -23,8 +24,9 @@ function Sources({ value }: { value: unknown }) {
   </Link>)}</Stack>;
 }
 
-export function FairValuePanel({ title, result, fallbackStatus, fallbackReasons, industry = false }: {
-  title: string; result?: MetricResult<FairValueRange> | null; fallbackStatus: MetricStatus; fallbackReasons: AnalysisReason[]; industry?: boolean;
+export function FairValuePanel({ title, result, fallbackStatus, fallbackReasons, kind = "historical", peerReference }: {
+  title: string; result?: MetricResult<FairValueRange> | null; fallbackStatus: MetricStatus; fallbackReasons: AnalysisReason[];
+  kind?: "historical" | "peer" | "scenario"; peerReference?: IndustryMarketReference | null;
 }) {
   const { t } = useTranslation();
   const value = result?.status === "AVAILABLE" ? result.value : null;
@@ -32,13 +34,22 @@ export function FairValuePanel({ title, result, fallbackStatus, fallbackReasons,
   const reasons = result?.reasons?.length ? result.reasons : fallbackReasons;
   const assumptions = value?.assumptions ?? {};
   const observation = value?.observation;
+  const primarySample = peerReference?.primaryValuationMetric ? peerReference.metrics?.[peerReference.primaryValuationMetric] : null;
+  const descriptionKey = { historical: "historicalMethodDescription", peer: "peerMethodDescription", scenario: "industryFairValueDescription" }[kind];
   return <Box component="section" aria-label={title}>
     <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
     <Stack spacing={1} sx={{ mt: 2 }}>
+      <Typography variant="body2" color="text.secondary">{t(`analysisReport.${descriptionKey}`)}</Typography>
+      {kind === "peer" && peerReference && <>
+        <Typography>{t("analysisReport.valuationIndustry")}: {peerReference.valuationIndustry || "—"}</Typography>
+        <Typography>{t("analysisReport.primaryMetric")}: {peerReference.primaryValuationMetric ?? "—"}</Typography>
+        <Typography>{t("analysisReport.marketAsOf")}: {peerReference.marketAsOf ?? "—"}</Typography>
+        {primarySample && <Typography>{t("analysisReport.peerSampleCounts", { companies: primarySample.companyCount, samples: primarySample.sampleCount })}</Typography>}
+      </>}
       {value ? <>
         <Typography>{t("analysisReport.valuationModel")}: <b>{value.modelCode}</b></Typography>
         <Typography>{t("analysisReport.fairValueRange")}: <b>{number(value.low)} – {number(value.high)} USD</b></Typography>
-        <Typography>{t(`analysisReport.${industry ? "rangeMidpoint" : "fairValueCentral"}`)}: <b>{number(value.central)}</b></Typography>
+        <Typography>{t(`analysisReport.${kind === "scenario" ? "rangeMidpoint" : "fairValueCentral"}`)}: <b>{number(value.central)}</b></Typography>
         {observation ? <Alert severity={observation.position === "BELOW_RANGE" ? "info" : observation.position === "ABOVE_RANGE" ? "warning" : "success"}>
           <Typography sx={{ fontWeight: 700 }}>{t(`analysisReport.observations.${observation.position}`)}</Typography>
           <Typography variant="body2">{t("analysisReport.observationPrice")}: {number(observation.currentPrice)} USD</Typography>
@@ -57,13 +68,12 @@ export function FairValuePanel({ title, result, fallbackStatus, fallbackReasons,
             {!!Object.keys(value.multipleQuantiles ?? {}).length && <Box>
               <Typography variant="body2">{t("analysisReport.multipleInputs")}</Typography>
               {Object.entries(value.multipleQuantiles ?? {}).map(([key, multiple]) => <Typography key={key} variant="body2">
-                {t(`analysisReport.quantiles.${key}`, { defaultValue: key })}: {number(multiple)}×
+                {t(`analysisReport.${kind === "peer" ? "peerQuantiles" : "quantiles"}.${key}`, { defaultValue: key })}: {number(multiple)}×
               </Typography>)}
             </Box>}
             {typeof assumptions.classificationCode === "string" && <Typography>{t("analysisReport.industryCode")}: {assumptions.classificationCode}</Typography>}
             {typeof assumptions.classificationAsOf === "string" && <Typography>{t("analysisReport.assessedAsOf")}: {assumptions.classificationAsOf}</Typography>}
             <Sources value={assumptions.sourceUrls} />
-            <Typography variant="body2" color="text.secondary">{industry ? t("analysisReport.industryFairValueDescription") : t("analysisReport.historicalMethodDescription")}</Typography>
             {value.evidenceRefs?.length ? <Box><Typography variant="caption">{t("analysisReport.evidenceReferences")}</Typography>
               <Typography variant="caption" component="div" sx={{ overflowWrap: "anywhere" }}>{value.evidenceRefs.join(" · ")}</Typography></Box> : null}
           </Stack></AccordionDetails>
@@ -86,7 +96,16 @@ export function IndustryMarketPanel({ reference }: { reference?: IndustryMarketR
       <Typography>{t("analysisReport.valuationIndustry")}: {reference.valuationIndustry || "—"}</Typography>
       <Typography>{t("analysisReport.primaryMetric")}: {reference.primaryValuationMetric ?? "—"}</Typography>
       <Typography>{t("analysisReport.marketAsOf")}: {reference.marketAsOf ?? "—"}</Typography>
-      {reference.status === "AVAILABLE" ? <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+      {!!Object.keys(reference.metrics ?? {}).length && (reference.status === "AVAILABLE" || reference.status === "INSUFFICIENT_DATA") ? <Box sx={{ overflowX: "auto" }}><Table size="small" aria-label={t("analysisReport.peerStatistics")} sx={{ mt: 1 }}>
+        <TableHead><TableRow>{["valuationModel", "peerP25", "peerMedian", "peerP75", "companyCount", "sampleCount", "metricStatus"].map((key) =>
+          <TableCell key={key}>{t(`analysisReport.${key}`)}</TableCell>)}</TableRow></TableHead>
+        <TableBody>{Object.entries(reference.metrics ?? {}).map(([code, metric]) => <TableRow key={code}>
+          <TableCell>{metricLabels[code] ?? code}</TableCell>
+          {[metric.q25, metric.median, metric.q75].map((value, index) => <TableCell key={index}>{metric.status === "AVAILABLE" ? `${number(value)}×` : "—"}</TableCell>)}
+          <TableCell>{metric.companyCount}</TableCell><TableCell>{metric.sampleCount}</TableCell>
+          <TableCell>{readableState(t, metric.status)}</TableCell>
+        </TableRow>)}</TableBody>
+      </Table></Box> : reference.status === "AVAILABLE" ? <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
         {[["P/E", reference.peMedian], ["P/B", reference.pbMedian], ["P/S", reference.psMedian], ["EV/EBITDA", reference.evEbitdaMedian]].map(([label, value]) =>
           <Chip key={String(label)} variant="outlined" label={`${label}: ${number(value as number | null)}×`} />)}
       </Stack> : <Typography color="text.secondary">{readableState(t, reference.status)} · {t(`analysisReport.reasons.${reference.reasonCode}`, { defaultValue: t("analysisReport.marketReferenceUnavailable") })}</Typography>}

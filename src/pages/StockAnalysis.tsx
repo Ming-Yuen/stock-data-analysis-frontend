@@ -217,6 +217,8 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
         {t("analysisReport.summary", {
           historical: metric(view.valuation?.fairValueRange)?.observation?.position
             ? t(`analysisReport.observations.${metric(view.valuation?.fairValueRange)?.observation?.position}`) : t("analysisReport.observationUnavailable"),
+          peer: metric(view.valuation?.industryMarketReference?.priceRange)?.observation?.position
+            ? t(`analysisReport.observations.${metric(view.valuation?.industryMarketReference?.priceRange)?.observation?.position}`) : t("analysisReport.observationUnavailable"),
           industry: metric(view.valuation?.industryFairValueRange)?.observation?.position
             ? t(`analysisReport.observations.${metric(view.valuation?.industryFairValueRange)?.observation?.position}`) : t("analysisReport.observationUnavailable"),
           technical: view.plan ? readableState(t, view.confluence?.marketDecision) : t("analysisReport.noPreferredPlan"),
@@ -263,12 +265,13 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
 
         <Grid size={{ xs: 12, md: 6 }} sx={{ order: 1 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
           {[
-            { key: "historicalFairValue", result: view.valuation?.fairValueRange, centralLabel: "fairValueCentral" },
-            { key: "industryFairValue", result: view.valuation?.industryFairValueRange, centralLabel: "rangeMidpoint" },
+            { key: "historicalFairValue", result: view.valuation?.fairValueRange, kind: "historical" as const },
+            { key: "peerReferenceValue", result: view.valuation?.industryMarketReference?.priceRange, kind: "peer" as const },
+            { key: "industryFairValue", result: view.valuation?.industryFairValueRange, kind: "scenario" as const },
           ].map((range, index) => {
             return <Box key={range.key}>
               {index > 0 && <Divider sx={{ my: 2 }} />}
-              <FairValuePanel title={t(`analysisReport.${range.key}`)} result={range.result} fallbackStatus={report.valuation.status} fallbackReasons={report.valuation.reasons} industry={range.key === "industryFairValue"} />
+              <FairValuePanel title={t(`analysisReport.${range.key}`)} result={range.result} fallbackStatus={report.valuation.status} fallbackReasons={report.valuation.reasons} kind={range.kind} peerReference={range.kind === "peer" ? view.valuation?.industryMarketReference : null} />
             </Box>;
           })}
         </Paper></Grid>
