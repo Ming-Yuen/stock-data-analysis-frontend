@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Box, Button, Chip, CircularProgress, Divider, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack, TextField, Typography } from "@mui/material";
-import { ArrowBack, ShowChart } from "@mui/icons-material";
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip, CircularProgress, Divider, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack, TextField, Typography } from "@mui/material";
+import { ArrowBack, ExpandMore, ShowChart } from "@mui/icons-material";
 import { WatchItem } from "../services/types/dto/watchlist";
 import { apiClient } from "../services/apiClient";
 import { apiConfig } from "../apiConfig";
 import { useTranslation } from "react-i18next";
 import { AccountRiskContext, AnalysisApiResponse, AnalysisHorizon, AnalysisReportData, AnalysisReportRequest, MetricResult, PositionDto, PositionSelectionKind, StockAnalysisReport } from "../services/types/dto/analysis";
+import { FairValuePanel, IndustryMarketPanel, readableReason, readableState, TechnicalIndicatorsPanel } from "./AnalysisEvidencePanels";
 
 interface StockAnalysisPageProps { stock?: WatchItem; onClose?: () => void; }
 interface PositionFormState { quantity: string; averageCost: string; manualStop: string; basisRef: string; thesis: string; }
@@ -110,7 +111,8 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const market = metric(report.marketContext);
     const position = metric(report.positionDecision);
     const priceDataThrough = tradePlans?.priceDataThrough ?? structure?.priceDataThrough ?? report.eligibility.priceDataThrough ?? null;
-    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, plan, rr, market, confluence, position };
+    const observationPlans = plans.filter((candidate) => candidate.planId !== plan?.planId);
+    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, plan, observationPlans, rr, market, confluence, position };
   }, [report]);
 
   const applyAccountRisk = () => {
@@ -184,10 +186,10 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       <Box>
         <Typography variant="h5" sx={{ fontWeight: 800 }}>{symbol} {t("analysisReport.analysis")}</Typography>
         <Typography variant="body2" color="text.secondary">{t("analysisReport.backend")} · FIGI {figi}</Typography>
-        {report && <Typography variant="caption" color="text.secondary">As of {report.context.analysisAsOf} · {report.context.horizon}{view?.priceDataThrough ? ` · ${t("analysisReport.priceDataThrough")}: ${view.priceDataThrough}` : ""}</Typography>}
+        {report && <Typography variant="caption" color="text.secondary">{t("analysisReport.analysisAsOf")}: {report.context.analysisAsOf} · {t(`analysisReport.horizons.${report.context.horizon}`)}{view?.priceDataThrough ? ` · ${t("analysisReport.priceDataThrough")}: ${view.priceDataThrough}` : ""}{report.eligibility.fundamentalDataThrough ? ` · ${t("analysisReport.fundamentalDataThrough")}: ${report.eligibility.fundamentalDataThrough}` : ""}</Typography>}
       </Box>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-        <FormControl size="small" sx={{ minWidth: 120 }}><InputLabel>{t("analysisReport.horizon")}</InputLabel><Select label={t("analysisReport.horizon")} value={horizon} onChange={(e) => setHorizon(e.target.value as AnalysisHorizon)}><MenuItem value="SWING">SWING</MenuItem><MenuItem value="POSITION">POSITION</MenuItem></Select></FormControl>
+        <FormControl size="small" sx={{ minWidth: 180 }}><InputLabel>{t("analysisReport.horizon")}</InputLabel><Select label={t("analysisReport.horizon")} value={horizon} onChange={(e) => setHorizon(e.target.value as AnalysisHorizon)}><MenuItem value="SWING">{t("analysisReport.horizons.SWING")}</MenuItem><MenuItem value="POSITION">{t("analysisReport.horizons.POSITION")}</MenuItem></Select></FormControl>
         <FormControl size="small" sx={{ minWidth: 170 }}><InputLabel>{t("analysisReport.position")}</InputLabel><Select label={t("analysisReport.position")} value={positionKind} onChange={(e) => setPositionKind(e.target.value as PositionSelectionKind)}><MenuItem value="UNKNOWN">{t("analysisReport.unknown")}</MenuItem><MenuItem value="CURRENT" disabled={!currentPosition}>{t("analysisReport.currentManual")}</MenuItem><MenuItem value="EXPLICIT_NONE">{t("analysisReport.explicitNone")}</MenuItem></Select></FormControl>
         <Button startIcon={<ArrowBack />} variant="outlined" onClick={close}>{t("analysisReport.back")}</Button>
       </Stack>
@@ -197,80 +199,98 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     {error && <Alert severity="error">{error}</Alert>}
     {!loading && !error && report && view && <>
       <Alert severity={report.eligibility.status === "ALLOWED" ? "success" : report.eligibility.status === "DEGRADED" ? "warning" : "error"} sx={{ mb: 2 }}>
-        {t("analysisReport.eligibility")}: <b>{report.eligibility.status}</b>{report.eligibility.reasons.length ? ` · ${report.eligibility.reasons.map((r) => r.code).join(", ")}` : ""}
+        {t("analysisReport.eligibility")}: <b>{readableState(t, report.eligibility.status)}</b>{report.eligibility.reasons.length ? ` · ${report.eligibility.reasons.map((r) => readableReason(t, r)).join(" · ")}` : ""}
       </Alert>
 
       <Grid container spacing={2}>
         {[
           [t("analysisReport.latestClose"), fmt(view.currentPrice)],
-          [t("analysisReport.marketDecision"), view.confluence?.marketDecision ?? "—"],
-          [t("analysisReport.confidence"), view.confluence?.confidence ?? "—"],
+          [t("analysisReport.marketDecision"), readableState(t, view.confluence?.marketDecision)],
+          [t("analysisReport.confidence"), readableState(t, view.confluence?.confidence)],
           [t("analysisReport.evidenceScore"), fmt(view.confluence?.evidenceScore, 1)],
           ["RSI 14", fmt(view.market ? metric(view.market.momentum.rsi14) : null)],
           ["Market", view.market ? metric(view.market.market)?.regime ?? view.market.market.status : "—"],
         ].map(([label, value]) => <Grid key={String(label)} size={{ xs: 6, md: 2 }}><Paper variant="outlined" sx={{ p: 2, height: "100%" }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="h6" sx={{ fontWeight: 700 }}>{value}</Typography></Paper></Grid>)}
       </Grid>
-
-      {view.structure?.timeframes?.length ? <Paper variant="outlined" sx={{ p: 3, mt: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.timeframes")}</Typography><Divider sx={{ my: 2 }} />
-        <Grid container spacing={2}>{view.structure.timeframes.map((tf) => <Grid key={tf.timeframe} size={{ xs: 12, md: 4 }}>
-          <Typography sx={{ fontWeight: 700 }}>{tf.timeframe}</Typography>
-          <Typography>{t("analysisReport.trend")}: {metric(tf.majorTrend)?.state ?? tf.majorTrend.status}</Typography>
-          <Typography>ATR14: {fmt(metric(tf.atr14)?.atr)} ({fmt(metric(tf.atr14)?.atrPercent)}%)</Typography>
-        </Grid>)}</Grid>
-      </Paper> : null}
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("analysisReport.scoreLimit")}</Typography>
+      <Alert severity="info" sx={{ mt: 2 }}>
+        {t("analysisReport.summary", {
+          historical: metric(view.valuation?.fairValueRange)?.observation?.position
+            ? t(`analysisReport.observations.${metric(view.valuation?.fairValueRange)?.observation?.position}`) : t("analysisReport.observationUnavailable"),
+          industry: metric(view.valuation?.industryFairValueRange)?.observation?.position
+            ? t(`analysisReport.observations.${metric(view.valuation?.industryFairValueRange)?.observation?.position}`) : t("analysisReport.observationUnavailable"),
+          technical: view.plan ? readableState(t, view.confluence?.marketDecision) : t("analysisReport.noPreferredPlan"),
+        })}
+      </Alert>
 
       <Grid container spacing={2} sx={{ mt: 0.5 }}>
-        <Grid size={{ xs: 12, md: 6 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
-          <Stack direction="row" spacing={1} alignItems="center"><ShowChart color="primary" /><Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.tradePlan")}</Typography>{view.plan && <Chip size="small" label={view.plan.status} />}</Stack>
+        <Grid size={{ xs: 12, md: 6 }} sx={{ order: 2 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
+          <Stack direction="row" spacing={1} alignItems="center"><ShowChart color="primary" /><Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.technicalTradePlan")}</Typography>{view.plan && <Chip size="small" label={readableState(t, view.plan.status)} />}</Stack>
           <Divider sx={{ my: 2 }} />
+          <Box component="section" aria-label={t("analysisReport.preferredTechnicalPlan")}>
           {!view.plan ? <Typography color="text.secondary">{view.confluence?.preferredPlanId ? t("analysisReport.preferredPlanMissing") : t("analysisReport.noPreferredPlan")}</Typography> : <Stack spacing={1}>
-            <Typography>Plan: <b>{view.plan.planId}</b></Typography>
-            <Typography>Entry: <b>{view.plan.entryRange ? `${fmt(view.plan.entryRange.lower)} – ${fmt(view.plan.entryRange.upper)}` : "—"}</b></Typography>
-            <Typography>{t("analysisReport.entryMethod")}: <b>{view.plan.entryMethod ?? "—"}</b></Typography>
+            <Typography>{t("analysisReport.technicalEntry")}: <b>{view.plan.entryRange ? `${fmt(view.plan.entryRange.lower)} – ${fmt(view.plan.entryRange.upper)}` : "—"}</b></Typography>
+            <Typography>{t("analysisReport.entryMethod")}: <b>{readableState(t, view.plan.entryMethod)}</b></Typography>
             <Typography>{t("analysisReport.trigger")}: <b>{view.plan.trigger ?? "—"}</b></Typography>
-            <Typography>Stop: <b>{fmt(view.plan.stop?.protectivePrice)}</b></Typography>
-            <Typography>Targets: <b>{view.plan.targets.map((target) => `${fmt(target.price)} (${fmt(target.weight * 100, 0)}%)`).join(" / ") || "—"}</b></Typography>
-            <Typography>Net RR: <b>{fmt(view.rr?.netRR)}</b></Typography>
-            {!!view.plan.reasons.length && <Alert severity="info">{view.plan.reasons.map((r) => r.code).join(" · ")}</Alert>}
+            <Typography>{t("analysisReport.protectiveStop")}: <b>{fmt(view.plan.stop?.protectivePrice)}</b></Typography>
+            <Typography>{t("analysisReport.closeInvalidation")}: <b>{fmt(view.plan.stop?.closeThreshold)}</b></Typography>
+            {view.plan.stop?.requiredCloses != null && <Typography variant="body2" color="text.secondary">{t("analysisReport.invalidationConfirmation", { count: view.plan.stop.requiredCloses, timeframe: readableState(t, view.plan.stop.evaluationTimeframe) })}</Typography>}
+            <Typography>{t("analysisReport.profitTargets")}: <b>{view.plan.targets.map((target) => `${fmt(target.price)} (${fmt(target.weight * 100, 0)}%)`).join(" / ") || "—"}</b></Typography>
+            <Typography>{t("analysisReport.netRR")}: <b>{fmt(view.rr?.netRR)}</b></Typography>
+            {view.plan.validThroughSession && <Typography>{t("analysisReport.entryValidThrough")}: {view.plan.validThroughSession}</Typography>}
+            {!!view.plan.reasons.length && <Alert severity="info">{view.plan.reasons.map((r) => readableReason(t, r)).join(" · ")}</Alert>}
           </Stack>}
+          </Box>
+          {!!view.observationPlans.length && <Accordion disableGutters elevation={0} sx={{ mt: 2, border: "1px solid", borderColor: "divider" }}>
+            <AccordionSummary expandIcon={<ExpandMore />}><Typography>{t("analysisReport.otherObservationPlans")}</Typography></AccordionSummary>
+            <AccordionDetails><Box component="section" aria-label={t("analysisReport.otherObservationPlans")}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t("analysisReport.observationPlansLimit")}</Typography>
+              <Stack spacing={2} divider={<Divider />}>{view.observationPlans.map((candidate, index) => <Stack key={candidate.planId} spacing={0.5}>
+                <Typography sx={{ fontWeight: 700 }}>{t("analysisReport.observationPlanNumber", { number: index + 1 })} · {readableState(t, candidate.status)}</Typography>
+                <Typography>{t("analysisReport.technicalEntry")}: <b>{candidate.entryRange ? `${fmt(candidate.entryRange.lower)} – ${fmt(candidate.entryRange.upper)}` : "—"}</b></Typography>
+                <Typography>{t("analysisReport.protectiveStop")}: <b>{fmt(candidate.stop?.protectivePrice)}</b></Typography>
+                <Typography>{t("analysisReport.profitTargets")}: <b>{candidate.targets?.map((target) => `${fmt(target.price)} (${fmt(target.weight * 100, 0)}%)`).join(" / ") || "—"}</b></Typography>
+                <Typography>{t("analysisReport.netRR")}: {fmt(metric(candidate.riskReward)?.netRR)}</Typography>
+                <Typography variant="body2" color="text.secondary">{candidate.reasons?.map((reason) => readableReason(t, reason)).join(" · ") || t("analysisReport.notSelectedAsPreferred")}</Typography>
+              </Stack>)}</Stack>
+            </Box></AccordionDetails>
+          </Accordion>}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>{t("analysisReport.technicalPlanLimit")}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("analysisReport.costAssumptions")}</Typography>
         </Paper></Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
+        <Grid size={{ xs: 12, md: 6 }} sx={{ order: 1 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
           {[
             { key: "historicalFairValue", result: view.valuation?.fairValueRange, centralLabel: "fairValueCentral" },
             { key: "industryFairValue", result: view.valuation?.industryFairValueRange, centralLabel: "rangeMidpoint" },
           ].map((range, index) => {
-            const value = metric(range.result);
-            const status = range.result?.status ?? (report.valuation.status === "AVAILABLE" ? "INSUFFICIENT_DATA" : report.valuation.status);
-            const reasons = range.result?.reasons?.length ? range.result.reasons : report.valuation.reasons;
-            return <Box component="section" key={range.key} aria-label={t(`analysisReport.${range.key}`)}>
+            return <Box key={range.key}>
               {index > 0 && <Divider sx={{ my: 2 }} />}
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>{t(`analysisReport.${range.key}`)}</Typography>
-              <Stack spacing={1} sx={{ mt: 2 }}>
-                {value ? <>
-                  <Typography>{t("analysisReport.valuationModel")}: <b>{value.modelCode}</b></Typography>
-                  <Typography>{t("analysisReport.fairValueRange")}: <b>{fmt(value.low)} – {fmt(value.high)}</b></Typography>
-                  <Typography>{t(`analysisReport.${range.centralLabel}`)}: <b>{fmt(value.central)}</b></Typography>
-                </> : <>
-                  <Typography color="text.secondary">{t("analysisReport.metricStatus")}: {status}</Typography>
-                  <Typography color="text.secondary">{reasons?.map((reason) => reason.code).join(" · ") || t("analysisReport.fairValueUnavailable")}</Typography>
-                </>}
-                {range.key === "industryFairValue" && <Typography variant="body2" color="text.secondary">{t("analysisReport.industryFairValueDescription")}</Typography>}
-              </Stack>
+              <FairValuePanel title={t(`analysisReport.${range.key}`)} result={range.result} fallbackStatus={report.valuation.status} fallbackReasons={report.valuation.reasons} industry={range.key === "industryFairValue"} />
             </Box>;
           })}
         </Paper></Grid>
       </Grid>
 
+      <IndustryMarketPanel reference={view.valuation?.industryMarketReference} />
+      {view.structure?.timeframes?.length ? <Paper variant="outlined" sx={{ p: 3, mt: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.timeframes")}</Typography><Divider sx={{ my: 2 }} />
+        <Grid container spacing={2}>{view.structure.timeframes.map((tf) => <Grid key={tf.timeframe} size={{ xs: 12, md: 4 }}>
+          <Typography sx={{ fontWeight: 700 }}>{readableState(t, tf.timeframe)}</Typography>
+          <Typography>{t("analysisReport.trend")}: {readableState(t, metric(tf.majorTrend)?.state ?? tf.majorTrend.status)}</Typography>
+          <Typography>ATR14: {fmt(metric(tf.atr14)?.atr)} ({fmt(metric(tf.atr14)?.atrPercent)}%)</Typography>
+        </Grid>)}</Grid>
+      </Paper> : null}
+      <TechnicalIndicatorsPanel detail={view.market?.momentumDetail} dataThrough={view.priceDataThrough} momentum={view.market?.momentum} />
+
       <Grid container spacing={2} sx={{ mt: 0.5 }}>
         <Grid size={{ xs: 12, md: 6 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}><Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.levels")}</Typography><Divider sx={{ my: 2 }} />
-          <Typography variant="body2" color="text.secondary">Support</Typography>{view.levels?.supports?.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{zone.strengthLabel}] · {zone.timeframe} · tests {zone.testCount}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) ?? <Typography>—</Typography>}
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>Resistance</Typography>{view.levels?.resistances?.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{zone.strengthLabel}] · {zone.timeframe} · tests {zone.testCount}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) ?? <Typography>—</Typography>}
+          <Typography variant="body2" color="text.secondary">{t("analysisReport.support")}</Typography>{view.levels?.supports?.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{t(`analysisReport.strengths.${zone.strengthLabel}`)}] · {readableState(t, zone.timeframe)} · {t("analysisReport.testCount", { count: zone.testCount })}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) ?? <Typography>—</Typography>}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>{t("analysisReport.resistance")}</Typography>{view.levels?.resistances?.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{t(`analysisReport.strengths.${zone.strengthLabel}`)}] · {readableState(t, zone.timeframe)} · {t("analysisReport.testCount", { count: zone.testCount })}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) ?? <Typography>—</Typography>}
         </Paper></Grid>
         <Grid size={{ xs: 12, md: 6 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}><Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.positionDecision")}</Typography><Divider sx={{ my: 2 }} />
-          {view.position ? <><Typography variant="h4" sx={{ fontWeight: 800 }}>{view.position.action}</Typography><Typography color="text.secondary">{view.position.primaryReason}</Typography>{view.position.suggestedQuantity != null && <Typography sx={{ mt: 1 }}>Suggested quantity: {fmt(view.position.suggestedQuantity, 4)}</Typography>}</>
-            : <Typography color="text.secondary">{report.positionDecision.reasons?.[0]?.code ?? report.positionDecision.status}</Typography>}
+          {view.position ? <><Typography variant="h4" sx={{ fontWeight: 800 }}>{readableState(t, view.position.action)}</Typography><Typography color="text.secondary">{view.position.reasons?.length ? view.position.reasons.map((reason) => readableReason(t, reason)).join(" · ") : view.position.primaryReason}</Typography>{view.position.suggestedQuantity != null && <Typography sx={{ mt: 1 }}>{t("analysisReport.suggestedQuantity")}: {fmt(view.position.suggestedQuantity, 4)}</Typography>}</>
+            : <Typography color="text.secondary">{report.positionDecision.reasons?.length ? report.positionDecision.reasons.map((reason) => readableReason(t, reason)).join(" · ") : readableState(t, report.positionDecision.status)}</Typography>}
         </Paper></Grid>
       </Grid>
 

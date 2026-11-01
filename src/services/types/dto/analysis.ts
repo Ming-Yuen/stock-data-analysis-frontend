@@ -50,20 +50,40 @@ export interface RiskReward { entry: number; stop: number; grossRR: number; netR
 export interface PriceRange { lower: number; upper: number; basisId: string; }
 export interface TradePlan {
   planId: string; setupType: string; entryRange?: PriceRange | null; entryMethod?: string | null; trigger?: string | null;
-  stop?: { protectivePrice: number; closeThreshold: number | null } | null; targets: { price: number; weight: number; reason: string }[];
+  stop?: { protectivePrice: number; closeThreshold: number | null; requiredCloses?: number; evaluationTimeframe?: string } | null;
+  targets: { price: number; weight: number; reason: string; sourceZoneId?: string }[];
   riskReward: MetricResult<RiskReward>; status: string; reasons: AnalysisReason[]; validThroughSession?: string | null; evidenceRefs?: string[];
 }
 export interface TradePlanResult { plans: TradePlan[]; currentPrice: number; priceDataThrough: string; currentPriceRR: MetricResult<RiskReward>; reasons: AnalysisReason[]; evidenceRefs?: string[]; contextEvaluated: boolean; }
 
-export interface FairValueRange { modelCode: string; low: number; central: number; high: number; status: MetricStatus; }
+export interface ValuationObservation { position: "BELOW_RANGE" | "WITHIN_RANGE" | "ABOVE_RANGE"; currentPrice: number; buyBelow: number; sellAbove: number; }
+export interface FairValueRange {
+  modelCode: string; low: number; central: number; high: number; status: MetricStatus;
+  priceBasis?: string; denominatorValue?: number | null; multipleQuantiles?: Record<string, number>;
+  sensitivity?: Record<string, number>; assumptions?: Record<string, unknown>; reasons?: AnalysisReason[]; evidenceRefs?: string[];
+  observation?: ValuationObservation | null;
+}
+export interface IndustryMarketReference {
+  classificationCode: string; valuationIndustry: string; primaryValuationMetric?: string | null;
+  marketAsOf?: string | null; peMedian?: number | null; pbMedian?: number | null; psMedian?: number | null; evEbitdaMedian?: number | null;
+  status: MetricStatus; reasonCode?: string | null; method?: string;
+}
 export interface HistoricalValuation {
   currentPrice: number; priceDate: string; basisId: string; priceBasis?: PriceBasisDescriptor | null;
   currentRatios: Record<string, MetricResult<number>>; fairValueRange: MetricResult<FairValueRange>;
   industryFairValueRange?: MetricResult<FairValueRange> | null;
+  industryMarketReference?: IndustryMarketReference | null;
+  fundamentalDataThrough?: string | null;
   eligibility: EligibilityStatus; reasons: AnalysisReason[]; availableAt?: string | null; observedAt?: string | null;
 }
 export interface MomentumVolume { rsi14: MetricResult<number>; momentumSignal: MetricResult<number>; macd: MetricResult<number>; macdSignal: MetricResult<number>; volumeVs20Day: MetricResult<number>; volumeSignal: MetricResult<number>; drawdownFrom252High: MetricResult<number>; return20: MetricResult<number>; return60: MetricResult<number>; }
-export interface MarketContext { momentum: MomentumVolume; market: MetricResult<{ regime: string; fearGreedScore: MetricResult<number>; breadthScore: MetricResult<number> }>; tradeConstraint: { entryPermission: string; reasonCodes: string[] }; reasons: AnalysisReason[]; }
+export interface IndicatorInterpretation { code: string; params: Record<string, string | number>; status: MetricStatus; reasons: AnalysisReason[]; }
+export interface MomentumAnalysis { indicators: Record<string, MetricResult<number>>; interpretations?: Record<string, IndicatorInterpretation>; reasons: AnalysisReason[]; }
+export interface MarketContext {
+  momentum: MomentumVolume; market: MetricResult<{ regime: string; fearGreedScore: MetricResult<number>; breadthScore: MetricResult<number> }>;
+  tradeConstraint: { entryPermission: string; reasonCodes: string[] }; reasons: AnalysisReason[];
+  momentumDetail?: MomentumAnalysis | null;
+}
 export interface Scenario { id?: string; type: string; probability?: number | null; status?: string; trigger?: string | null; invalidation?: string | null; referencePrice: number; targetPrice: number; invalidationPrice: number; rationale: string; }
 export interface ConfluenceScenario {
   confluence: { score0To100: number; evidenceScore: number; coverage: number; policyVersion: string };

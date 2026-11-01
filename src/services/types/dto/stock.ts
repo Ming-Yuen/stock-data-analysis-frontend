@@ -40,6 +40,7 @@ export interface StockClassification {
   code: string;
   sector: string;
   valuationIndustry: string;
+  primaryValuationMetric?: string | null;
 }
 
 export interface StockClassificationResponse {
