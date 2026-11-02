@@ -19,7 +19,10 @@ const JOB_KEY = "stock-industry-upload-job";
 export function DataUploadPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [type, setType] = useState("STOCK_INDUSTRY");
+  const [types, setTypes] = useState<string[]>([]);
+  const [type, setType] = useState("");
+  const [typesLoading, setTypesLoading] = useState(true);
+  const [typesError, setTypesError] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [jobId, setJobId] = useState<string | null>(() => localStorage.getItem(JOB_KEY));
@@ -29,6 +32,21 @@ export function DataUploadPage() {
   const terminal = job?.status === "COMPLETED" || job?.status === "FAILED";
   const pending = sending || job?.status === "PENDING" || job?.status === "PROCESSING" || (!!jobId && !job && !pollWarning);
   const result = job?.status === "COMPLETED" ? job.result : null;
+  const typesReady = !typesLoading && !typesError && types.length > 0;
+
+  useEffect(() => {
+    let disposed = false;
+    apiClient.get<string[]>("upload/types").then(response => {
+      if (disposed) return;
+      setTypes(response.data);
+      setType(response.data[0] ?? "");
+    }).catch(() => {
+      if (!disposed) setTypesError(true);
+    }).finally(() => {
+      if (!disposed) setTypesLoading(false);
+    });
+    return () => { disposed = true; };
+  }, []);
 
   useEffect(() => {
     if (!jobId) return;
@@ -52,7 +70,7 @@ export function DataUploadPage() {
   }, [jobId, queryClient, t]);
 
   const upload = async () => {
-    if (!file || pending) return;
+    if (!file || pending || !typesReady || !types.includes(type)) return;
     const id = !jobId || terminal ? crypto.randomUUID() : jobId;
     localStorage.setItem(JOB_KEY, id); setJobId(id);
     setSending(true); setError(""); setPollWarning(""); setJob(null);
@@ -72,12 +90,15 @@ export function DataUploadPage() {
   return <Box sx={{ p: 3, maxWidth: 1100, mx: "auto" }}>
     <Typography variant="h5" sx={{ mb: 2 }}>{t("upload.title")}</Typography>
     <Paper sx={{ p: 3, mb: 3 }}>
-      <FormControl fullWidth sx={{ mb: 2 }} disabled={pending}>
+      <FormControl fullWidth sx={{ mb: 2 }} disabled={pending || !typesReady}>
         <InputLabel id="upload-type">{t("upload.type")}</InputLabel>
         <Select labelId="upload-type" label={t("upload.type")} value={type} onChange={event => { setType(event.target.value); setError(""); }}>
-          <MenuItem value="STOCK_INDUSTRY">{t("upload.stockIndustry")}</MenuItem>
+          {types.map(value => <MenuItem key={value} value={value}>{t(`upload.types.${value}`, { defaultValue: value })}</MenuItem>)}
         </Select>
       </FormControl>
+      {typesLoading && <Alert severity="info" sx={{ mb: 2 }}>{t("upload.typesLoading")}</Alert>}
+      {typesError && <Alert severity="error" sx={{ mb: 2 }}>{t("upload.typesFailed")}</Alert>}
+      {!typesLoading && !typesError && types.length === 0 && <Alert severity="warning" sx={{ mb: 2 }}>{t("upload.typesEmpty")}</Alert>}
       <Alert severity="info" sx={{ mb: 2 }}>{t("upload.instructions")}</Alert>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
         <Button component="label" variant="outlined" disabled={pending}>
@@ -91,7 +112,7 @@ export function DataUploadPage() {
           }} />
         </Button>
         <Typography variant="body2">{file?.name || t("upload.noFile")}</Typography>
-        <Button aria-label={t("upload.submit")} variant="contained" disabled={!file || pending} onClick={upload}>{pending ? <CircularProgress size={20} /> : t("upload.submit")}</Button>
+        <Button aria-label={t("upload.submit")} variant="contained" disabled={!file || pending || !typesReady} onClick={upload}>{pending ? <CircularProgress size={20} /> : t("upload.submit")}</Button>
       </Box>
     </Paper>
     {jobId && <Paper sx={{ p: 2, mb: 2 }}>

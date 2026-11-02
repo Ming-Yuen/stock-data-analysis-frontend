@@ -380,7 +380,10 @@
   "upload": {
     "title": "Data Upload",
     "type": "Upload function",
-    "stockIndustry": "Stock industry update",
+    "types": { "STOCK_INDUSTRY": "Stock industry update" },
+    "typesLoading": "Loading upload functions…",
+    "typesEmpty": "No upload functions are available.",
+    "typesFailed": "Unable to load upload functions. Refresh the page to try again.",
     "instructions": "Upload UTF-8 CSV (up to 10 MB) with Symbol, Name and Industry. Valid industries replace existing classifications; missing industries are created. Missing or ambiguous matches remain unchanged. Quotes are ignored. New industries have no sector and use UNKNOWN valuation model.",
     "selectFile": "Select CSV",
     "noFile": "No file selected",

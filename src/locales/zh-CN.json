@@ -846,7 +846,10 @@
   "upload": {
     "title": "資料上傳",
     "type": "上傳功能",
-    "stockIndustry": "股票產業更新",
+    "types": { "STOCK_INDUSTRY": "股票产业更新" },
+    "typesLoading": "正在加载上传功能…",
+    "typesEmpty": "目前没有可用的上传功能。",
+    "typesFailed": "无法加载上传功能，请刷新页面重试。",
     "instructions": "上傳 UTF-8 CSV（最多 10 MB），須包含 Symbol、Name、Industry。有效產業會覆蓋現有分類，不存在的產業會自動新增；缺產業或無法唯一配對的資料保留原狀。行情欄位不會匯入。新產業的板塊留空，估值模型為 UNKNOWN。",
     "selectFile": "選擇 CSV",
     "noFile": "尚未選擇檔案",
