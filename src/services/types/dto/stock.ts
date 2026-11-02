@@ -31,18 +31,23 @@ export interface StockSnapshot {
   postFilingEventSubtype?: string;
   postFilingEventTitle?: string;
   postFilingEventDescription?: string;
-  classificationCode?: string | null;
-  sector?: string | null;
-  valuationIndustry?: string | null;
+  industryCode?: string | null;
+  industry?: string | null;
+  concepts: StockConcept[];
 }
 
 export interface StockClassification {
   code: string;
-  sector: string;
-  valuationIndustry: string;
+  industry: string;
   primaryValuationMetric?: string | null;
+}
+
+export interface StockConcept {
+  code: string;
+  name: string;
 }
 
 export interface StockClassificationResponse {
   classifications: StockClassification[];
+  concepts: StockConcept[];
 }

@@ -33,6 +33,7 @@ export function FairValuePanel({ title, result, fallbackStatus, fallbackReasons,
   const status = result?.status ?? (fallbackStatus === "AVAILABLE" ? "INSUFFICIENT_DATA" : fallbackStatus);
   const reasons = result?.reasons?.length ? result.reasons : fallbackReasons;
   const assumptions = value?.assumptions ?? {};
+  const industryCode = assumptions.industryCode ?? assumptions.classificationCode;
   const observation = value?.observation;
   const primarySample = peerReference?.primaryValuationMetric ? peerReference.metrics?.[peerReference.primaryValuationMetric] : null;
   const descriptionKey = { historical: "historicalMethodDescription", peer: "peerMethodDescription", scenario: "industryFairValueDescription" }[kind];
@@ -41,7 +42,7 @@ export function FairValuePanel({ title, result, fallbackStatus, fallbackReasons,
     <Stack spacing={1} sx={{ mt: 2 }}>
       <Typography variant="body2" color="text.secondary">{t(`analysisReport.${descriptionKey}`)}</Typography>
       {kind === "peer" && peerReference && <>
-        <Typography>{t("analysisReport.valuationIndustry")}: {peerReference.valuationIndustry || "—"}</Typography>
+        <Typography>{t("analysisReport.industry")}: {peerReference.industry || "—"}</Typography>
         <Typography>{t("analysisReport.primaryMetric")}: {peerReference.primaryValuationMetric ?? "—"}</Typography>
         <Typography>{t("analysisReport.marketAsOf")}: {peerReference.marketAsOf ?? "—"}</Typography>
         {primarySample && <Typography>{t("analysisReport.peerSampleCounts", { companies: primarySample.companyCount, samples: primarySample.sampleCount })}</Typography>}
@@ -71,7 +72,7 @@ export function FairValuePanel({ title, result, fallbackStatus, fallbackReasons,
                 {t(`analysisReport.${kind === "peer" ? "peerQuantiles" : "quantiles"}.${key}`, { defaultValue: key })}: {number(multiple)}×
               </Typography>)}
             </Box>}
-            {typeof assumptions.classificationCode === "string" && <Typography>{t("analysisReport.industryCode")}: {assumptions.classificationCode}</Typography>}
+            {typeof industryCode === "string" && <Typography>{t("analysisReport.industryCode")}: {industryCode}</Typography>}
             {typeof assumptions.classificationAsOf === "string" && <Typography>{t("analysisReport.assessedAsOf")}: {assumptions.classificationAsOf}</Typography>}
             <Sources value={assumptions.sourceUrls} />
             {value.evidenceRefs?.length ? <Box><Typography variant="caption">{t("analysisReport.evidenceReferences")}</Typography>
@@ -93,7 +94,7 @@ export function IndustryMarketPanel({ reference }: { reference?: IndustryMarketR
     <Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.industryMarket")}</Typography>
     <Typography variant="body2" color="text.secondary" sx={{ my: 1 }}>{t("analysisReport.industryMarketDescription")}</Typography>
     {reference ? <>
-      <Typography>{t("analysisReport.valuationIndustry")}: {reference.valuationIndustry || "—"}</Typography>
+      <Typography>{t("analysisReport.industry")}: {reference.industry || "—"}</Typography>
       <Typography>{t("analysisReport.primaryMetric")}: {reference.primaryValuationMetric ?? "—"}</Typography>
       <Typography>{t("analysisReport.marketAsOf")}: {reference.marketAsOf ?? "—"}</Typography>
       {!!Object.keys(reference.metrics ?? {}).length && (reference.status === "AVAILABLE" || reference.status === "INSUFFICIENT_DATA") ? <Box sx={{ overflowX: "auto" }}><Table size="small" aria-label={t("analysisReport.peerStatistics")} sx={{ mt: 1 }}>

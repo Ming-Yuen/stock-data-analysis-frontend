@@ -226,10 +226,6 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
     setSearchValues((prev) => {
       const next: SearchValuesState = { ...prev };
 
-      if (columnId === "sector") {
-        next["valuationIndustry"] = "";
-      }
-
       next[columnId] = v;
       onSearchFieldChange?.(columnId, v, next as Record<string, any>);
       return next;
@@ -312,6 +308,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
       activeFiltersEntries.every(([field, value]) => {
         const col = columns.find((c) => c.id === field);
         if (!col) return true;
+        if (col.filter) return col.filter(value, row);
         const cell = row[field];
 
         if (col.type === "checkbox") {
@@ -462,7 +459,7 @@ const DynamicFormTable: React.FC<DynamicFormTableProps> = ({
           </MenuItem>
           {options.map((opt) => (
             <MenuItem key={opt.value} value={String(opt.value)}>
-              {getDisplayValue(col, opt.value)}
+              {getDisplayValue(col, opt.label)}
             </MenuItem>
           ))}
         </Select>

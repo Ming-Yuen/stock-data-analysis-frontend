@@ -16,11 +16,6 @@ interface WatchListPageProps {
 
 type Option = { label: string; value: string };
 
-type SearchState = {
-  sector: string;
-  valuationIndustry: string;
-};
-
 export function WatchListPage({ menuTree }: WatchListPageProps) {
   const [pageSize] = useState(10);
   const [allData, setAllData] = useState<WatchItem[]>([]);
@@ -28,11 +23,6 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const initializedRef = useRef(false);
-
-  const [searchState, setSearchState] = useState<SearchState>({
-    sector: "",
-    valuationIndustry: "",
-  });
 
   const stockSearch = useMutate<WatchlistEnquiryResponse, any>(
     apiConfig.getWatchList,
@@ -53,20 +43,16 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
   );
 
   const classificationOptions = useMemo(() => {
-    const dictionary = classificationResp?.classifications ?? [];
-    const optionsFor = (field: keyof SearchState, parents: (keyof SearchState)[]): Option[] => {
-      const names = dictionary
-        .filter((row) => parents.every((parent) => !searchState[parent] || row[parent] === searchState[parent]))
-        .map((row) => row[field])
-        .filter(Boolean);
-      return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b))
-        .map((name) => ({ label: name, value: name }));
-    };
+    const industries = (classificationResp?.classifications ?? []).map(row => row.industry).filter(Boolean);
+    const concepts: Option[] = (classificationResp?.concepts ?? [])
+      .map(concept => ({ label: concept.name, value: concept.code }))
+      .sort((a, b) => a.label.localeCompare(b.label));
     return {
-      sector: optionsFor("sector", []),
-      valuationIndustry: optionsFor("valuationIndustry", ["sector"]),
+      concepts,
+      industries: Array.from(new Set(industries)).sort((a, b) => a.localeCompare(b))
+        .map(name => ({ label: name, value: name })),
     };
-  }, [classificationResp, searchState]);
+  }, [classificationResp]);
 
   const columns: Column[] = useMemo(
     () => [
@@ -80,8 +66,12 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       },
       { id: "symbol", type: "text", label: t("watchlist.columns.symbol"), width: 200, uppercase: true, },
       { id: "stockType", type: "select", label: t("watchlist.columns.stockType"), width: 200, uppercase: true, },
-      { id: "sector", type: "select", label: t("watchlist.columns.sector"), width: 200, selectOptions: classificationOptions.sector, },
-      { id: "valuationIndustry", type: "select", label: t("watchlist.columns.valuationIndustry"), width: 200, selectOptions: classificationOptions.valuationIndustry, },
+      { id: "conceptCode", type: "select", label: t("watchlist.columns.conceptCode"), width: 240,
+        selectOptions: classificationOptions.concepts, sortable: false,
+        filter: (value, row: WatchItem) => row.concepts?.some(concept => concept.code === value) ?? false,
+        render: (_value, row: WatchItem) => row.concepts?.map(concept => concept.name).join(", ") || "N/A",
+      },
+      { id: "industry", type: "select", label: t("watchlist.columns.industry"), width: 200, selectOptions: classificationOptions.industries, },
       { id: "quoteDate", type: "date", label: t("watchlist.columns.quoteDate"), width: 200, displayDateFormat: "yyyy-MM-dd", },
       { id: "closePrice", type: "number", label: t("watchlist.columns.closePrice"), width: 200, },
       { id: "pe", type: "number", label: t("watchlist.columns.pe"), width: 200, },
@@ -101,16 +91,6 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
       stockSearch.mutate(payload);
     },
     [pageSize, stockSearch]
-  );
-
-  const handleSearchFieldChange = useCallback(
-    (fieldId: string, value: any, allValues: Record<string, any>) => {
-      setSearchState({
-        sector: String(allValues.sector ?? ""),
-        valuationIndustry: String(allValues.valuationIndustry ?? ""),
-      });
-    },
-    []
   );
 
   useEffect(() => {
@@ -137,7 +117,6 @@ export function WatchListPage({ menuTree }: WatchListPageProps) {
         error={stockSearch.isError ? (stockSearch.error as any) : null}
         enableInfiniteScroll={false}
         onSearch={handleSearch}
-        onSearchFieldChange={handleSearchFieldChange}
         onRowDoubleClick={(row) => navigate(`/stockAnalysis/${encodeURIComponent((row as WatchItem).figi)}`)}
       />
     </Box>

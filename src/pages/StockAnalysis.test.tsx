@@ -56,7 +56,7 @@ test.each(["VALUATION_SNAPSHOT_REQUIRED", "VALUATION_SNAPSHOT_INPUT_MISMATCH", "
 
 test("keeps peer reference prices, same-date statistics and sample counts distinct from history and AI assumptions", () => {
   valuation.industryMarketReference = {
-    classificationCode: "HARDWARE", valuationIndustry: "Computer hardware", primaryValuationMetric: "PE", status: "AVAILABLE", marketAsOf: "2026-10-30",
+    industryCode: "HARDWARE", industry: "Computer hardware", primaryValuationMetric: "PE", status: "AVAILABLE", marketAsOf: "2026-10-30",
     metrics: { PE: { q25: 25, median: 28, q75: 30, companyCount: 3, sampleCount: 4, status: "AVAILABLE" },
       PB: { q25: null, median: null, q75: null, companyCount: 2, sampleCount: 2, status: "INSUFFICIENT_DATA" } },
     priceRange: fair("PE", 125, 140, 150),
@@ -64,6 +64,7 @@ test("keeps peer reference prices, same-date statistics and sample counts distin
   valuation.industryMarketReference.priceRange.value.observation = { position: "ABOVE_RANGE", currentPrice: 160, buyBelow: 125, sellAbove: 150 };
   valuation.industryMarketReference.priceRange.value.multipleQuantiles = { q25: 25, q50: 28, q75: 30 };
   render(<StockAnalysisPage />);
+  expect(range("peer").getByText(/Computer hardware/)).toBeTruthy();
   expect(range("peer").getByText("125.00 – 150.00 USD")).toBeTruthy();
   expect(range("peer").getByText(/有效樣本：3 家公司／4 個股類觀測/)).toBeTruthy();
   expect(range("peer").getByText(/市場比較日期: 2026-10-30/)).toBeTruthy();
@@ -82,7 +83,7 @@ test("keeps peer reference prices, same-date statistics and sample counts distin
 
 test("shows insufficient company samples without creating peer prices or displaying unpublished multiples", () => {
   valuation.industryMarketReference = {
-    classificationCode: "HARDWARE", valuationIndustry: "Computer hardware", primaryValuationMetric: "PE", status: "INSUFFICIENT_DATA", marketAsOf: "2026-10-30",
+    industryCode: "HARDWARE", industry: "Computer hardware", primaryValuationMetric: "PE", status: "INSUFFICIENT_DATA", marketAsOf: "2026-10-30",
     metrics: { PE: { q25: 25, median: 28, q75: 30, companyCount: 2, sampleCount: 3, status: "INSUFFICIENT_DATA" } },
     priceRange: unavailable("PEER_SAMPLE_INSUFFICIENT", "有效公司數不足三家"),
   };
@@ -97,7 +98,7 @@ test("shows insufficient company samples without creating peer prices or display
 test("does not turn stale peer prices into a current observation", () => {
   const stale = fair("PE", 125, 140, 150);
   stale.status = "STALE";
-  valuation.industryMarketReference = { classificationCode: "HARDWARE", valuationIndustry: "Computer hardware", primaryValuationMetric: "PE", status: "STALE", marketAsOf: "2026-10-29", priceRange: stale };
+  valuation.industryMarketReference = { industryCode: "HARDWARE", industry: "Computer hardware", primaryValuationMetric: "PE", status: "STALE", marketAsOf: "2026-10-29", priceRange: stale };
   render(<StockAnalysisPage />);
   expect(range("peer").getByText(/資料已過期/)).toBeTruthy();
   expect(range("peer").queryByText("125.00 – 150.00 USD")).toBeNull();
@@ -156,6 +157,18 @@ test("reveals verified inputs and safe source links and financial dates", () => 
   expect(screen.getByText(/財務期間截至: 2026-06-27/)).toBeTruthy();
 });
 
+test.each([
+  { name: "legacy key", assumptions: { classificationCode: "I_OLD" }, expected: "I_OLD" },
+  { name: "current key", assumptions: { industryCode: "I_NEW" }, expected: "I_NEW" },
+  { name: "current key takes precedence", assumptions: { industryCode: "I_NEW", classificationCode: "I_OLD" }, expected: "I_NEW" },
+])("reads industry code from saved assumptions: $name", ({ assumptions, expected }) => {
+  valuation.industryFairValueRange.value.assumptions = assumptions;
+  render(<StockAnalysisPage />);
+  fireEvent.click(range("industry").getByRole("button", { name: resources.analysisReport.calculationEvidence }));
+  expect(range("industry").getByText(`${resources.analysisReport.industryCode}: ${expected}`)).toBeTruthy();
+  if (expected === "I_NEW") expect(range("industry").queryByText(`${resources.analysisReport.industryCode}: I_OLD`)).toBeNull();
+});
+
 test("does not promote stale ranges or unselected plans into recommendations", () => {
   valuation.fairValueRange.status = "STALE";
   valuation.fairValueRange.value.observation = { position: "BELOW_RANGE", currentPrice: 99, buyBelow: 100, sellAbove: 120 };
@@ -211,7 +224,7 @@ test("shows backend technical descriptions without inferring a crossover", () =>
 
 test("uses backend messages for unknown reasons and keeps market comparison separate", () => {
   valuation.industryFairValueRange = unavailable("NEW_UPSTREAM_REASON", "來源正在重新核驗");
-  valuation.industryMarketReference = { classificationCode: "TEST", valuationIndustry: "Test industry", primaryValuationMetric: "PE", status: "AVAILABLE", marketAsOf: "2026-10-30", peMedian: 22, metrics: {} };
+  valuation.industryMarketReference = { industryCode: "TEST", industry: "Test industry", primaryValuationMetric: "PE", status: "AVAILABLE", marketAsOf: "2026-10-30", peMedian: 22, metrics: {} };
   render(<StockAnalysisPage />);
   expect(range("industry").getByText("來源正在重新核驗")).toBeTruthy();
   expect(screen.getByText("P/E: 22.00×")).toBeTruthy();

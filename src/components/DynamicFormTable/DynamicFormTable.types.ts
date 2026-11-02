@@ -13,6 +13,7 @@ export interface Column {
     index: number,
     extraProps?: any
   ) => React.ReactNode;
+  filter?: (value: any, row: any) => boolean;
   isActionColumn?: boolean;
   sortable?: boolean;
   sourceDateFormat?: string;
@@ -38,7 +39,7 @@ export interface DynamicFormTableProps {
   onSearch?: (criteria: Record<string, any>) => void;
   onRowDoubleClick?: (row: Record<string, any>) => void;
 
-  // 搜尋欄位變更時通知父層（做分類聯動）
+  // 搜尋欄位變更時通知父層
   onSearchFieldChange?: (
     fieldId: string,
     value: any,

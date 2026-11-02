@@ -64,7 +64,7 @@ export interface FairValueRange {
   observation?: ValuationObservation | null;
 }
 export interface IndustryMarketReference {
-  classificationCode: string | null; valuationIndustry: string | null; primaryValuationMetric?: string | null;
+  industryCode: string | null; industry: string | null; primaryValuationMetric?: string | null;
   marketAsOf?: string | null; peMedian?: number | null; pbMedian?: number | null; psMedian?: number | null; evEbitdaMedian?: number | null;
   status: MetricStatus; reasonCode?: string | null; method?: string;
   metrics?: Record<string, IndustryMarketMetric>;
