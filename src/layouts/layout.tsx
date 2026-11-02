@@ -39,6 +39,7 @@ const MENU_I18N_KEYS: Record<string, string> = {
   "/dataManagement": "menu.dataManagement",
   "/jobConfig": "menu.jobConfiguration",
   "/watchlist": "menu.watchList",
+  "/upload": "upload.title",
 };
 
 const Layout: React.FC<LayoutProps> = ({ menuData }) => {

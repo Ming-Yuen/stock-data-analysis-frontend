@@ -842,5 +842,44 @@
     "observationPlansLimit": "以下计划未被选为首选，价位只作条件观察，不代表目前可买入。",
     "observationPlanNumber": "观察计划 {{number}}",
     "notSelectedAsPreferred": "此计划尚未被选为首选计划。"
+  },
+  "upload": {
+    "title": "資料上傳",
+    "type": "上傳功能",
+    "stockIndustry": "股票產業更新",
+    "instructions": "上傳 UTF-8 CSV（最多 10 MB），須包含 Symbol、Name、Industry。有效產業會覆蓋現有分類，不存在的產業會自動新增；缺產業或無法唯一配對的資料保留原狀。行情欄位不會匯入。新產業的板塊留空，估值模型為 UNKNOWN。",
+    "selectFile": "選擇 CSV",
+    "noFile": "尚未選擇檔案",
+    "submit": "上傳並更新",
+    "failed": "上傳失敗，請檢查連線或檔案後重試。",
+    "invalidFile": "請選擇不超過 10 MB 的 CSV 檔案。",
+    "completed": "匯入已提交，請核對更新及略過筆數。",
+    "totalRows": "總筆數",
+    "updated": "已更新股票",
+    "unchanged": "分類未變",
+    "createdIndustries": "新增產業",
+    "missingIndustry": "缺少產業",
+    "unmatched": "股票未匹配",
+    "ambiguous": "配對不唯一",
+    "issueLimit": "以下最多顯示 100 筆略過資料；上方統計包含全部資料。",
+    "row": "CSV 列號",
+    "reason": "略過原因",
+    "reasons": {
+      "MISSING_INDUSTRY": "未提供產業",
+      "STOCK_NOT_FOUND": "系統找不到此股票代碼",
+      "AMBIGUOUS_SYMBOL": "代碼對應多個股票，未更新",
+      "AMBIGUOUS_INDUSTRY": "產業名稱對應多個分類，未更新"
+    },
+    "jobId": "上传任务 ID",
+    "sending": "文件上传中，服务器接收后会在后台处理。",
+    "background": "正在后台处理。可以离开或刷新页面，之后回来查询结果。",
+    "checkPending": "尚未确认服务器状态，会继续查询。若文件尚未接收，可选择同一文件重试；系统会沿用请求 ID。",
+    "restarted": "Backend 在完成前重启，本次导入已回滚。请重新选择文件并上传。",
+    "states": {
+      "PENDING": "等待处理",
+      "PROCESSING": "处理中",
+      "COMPLETED": "已完成",
+      "FAILED": "失败"
+    }
   }
 }

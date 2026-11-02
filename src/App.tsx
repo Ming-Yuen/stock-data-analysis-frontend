@@ -7,6 +7,7 @@ import { useFetch } from "./hooks/api/useApi";
 import { apiConfig } from "./apiConfig";
 import { WatchListPage } from "./pages/Watchlist";
 import { MenuTree, MenuEnquiryResponse } from "./services/types/dto/menu";
+import { DataUploadPage } from "./pages/DataUpload";
 import HomeDashboard from "./pages/HomeDashboard";
 import { StockAnalysisPage } from "./pages/StockAnalysis";
 
@@ -21,6 +22,7 @@ interface PageConfig {
 
 // 页面组件映射表 - 只需要在这里维护配置
 const PAGE_CONFIG_MAP: Record<string, PageConfig> = {
+  "/upload": { component: DataUploadPage },
   "/jobConfig": { component: JobManagementPage },
   "/Home": { component: JobManagementPage },
   "/watchlist": { component: WatchListPage },

@@ -376,5 +376,44 @@
     "observationPlansLimit": "These plans were not selected as preferred. The price levels are observation references, not active buy instructions.",
     "observationPlanNumber": "Observation plan {{number}}",
     "notSelectedAsPreferred": "This plan has not been selected as the preferred plan."
+  },
+  "upload": {
+    "title": "Data Upload",
+    "type": "Upload function",
+    "stockIndustry": "Stock industry update",
+    "instructions": "Upload UTF-8 CSV (up to 10 MB) with Symbol, Name and Industry. Valid industries replace existing classifications; missing industries are created. Missing or ambiguous matches remain unchanged. Quotes are ignored. New industries have no sector and use UNKNOWN valuation model.",
+    "selectFile": "Select CSV",
+    "noFile": "No file selected",
+    "submit": "Upload and update",
+    "failed": "Upload failed. Check the connection or file and try again.",
+    "invalidFile": "Select a CSV file no larger than 10 MB.",
+    "completed": "Import committed. Review updated and skipped counts.",
+    "totalRows": "Total rows",
+    "updated": "Stocks updated",
+    "unchanged": "Unchanged",
+    "createdIndustries": "Industries created",
+    "missingIndustry": "Missing industry",
+    "unmatched": "Unmatched stock",
+    "ambiguous": "Ambiguous match",
+    "issueLimit": "Showing up to 100 skipped rows. Counts above include all rows.",
+    "row": "CSV row",
+    "reason": "Reason skipped",
+    "reasons": {
+      "MISSING_INDUSTRY": "Industry not provided",
+      "STOCK_NOT_FOUND": "Stock symbol not found",
+      "AMBIGUOUS_SYMBOL": "Symbol matches multiple stocks",
+      "AMBIGUOUS_INDUSTRY": "Industry name matches multiple classifications"
+    },
+    "jobId": "Upload task ID",
+    "sending": "Uploading file. Processing starts after the server accepts it.",
+    "background": "Processing in the background. You can leave or refresh this page and return to check the result.",
+    "checkPending": "The server status is not confirmed. Checks will continue. If the upload was not received, select the same file and retry; the request ID is retained.",
+    "restarted": "The backend restarted before completion. The import was rolled back. Select the file and upload it again.",
+    "states": {
+      "PENDING": "Queued",
+      "PROCESSING": "Processing",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed"
+    }
   }
 }
