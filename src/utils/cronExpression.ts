@@ -21,6 +21,18 @@ function toNumber(value: string, min: number, max: number) {
   return number >= min && number <= max ? number : null;
 }
 
+/** 讀取固定排程時刻供清單排序，日期與觸發條件由 Quartz 處理。 */
+export function getFixedQuartzTimeSeconds(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const parts = value.trim().split(/\s+/);
+  if (parts.length !== 6 && parts.length !== 7) return null;
+  const second = toNumber(parts[0], 0, 59);
+  const minute = toNumber(parts[1], 0, 59);
+  const hour = toNumber(parts[2], 0, 23);
+  if (second === null || minute === null || hour === null) return null;
+  return hour * 3600 + minute * 60 + second;
+}
+
 function parseStep(value: string) {
   const match = value.match(/^(?:\*|0)\/(\d+)$/);
   if (!match) return null;

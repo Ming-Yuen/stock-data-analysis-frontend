@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Box, Button, IconButton, Tooltip, Stack } from "@mui/material";
 import { Add, PlayArrow } from "@mui/icons-material";
 import { useFetch, useMutate } from "../hooks/api/useApi";
@@ -12,7 +12,7 @@ import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
 import { MenuTree } from "../services/types/dto/menu";
 import { useTranslation } from "react-i18next";
-import { formatQuartzCronExpression } from "../utils/cronExpression";
+import { formatQuartzCronExpression, getFixedQuartzTimeSeconds } from "../utils/cronExpression";
 
 interface JobManagementPageProps {
   menuTree: MenuTree;
@@ -22,13 +22,17 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   const { t } = useTranslation();
   const [showCreatePage, setShowCreatePage] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [allData, setAllData] = useState<Job[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-
-  const { data, isLoading, isError, error, refetch } = useFetch<EnquiryJobResponse>(apiConfig.getJobList, { page, pageSize });
+  const { data, isLoading, isError, error, refetch } = useFetch<EnquiryJobResponse>(apiConfig.getJobList);
   const launchBatchJob = useMutate<ApiResponse>(apiConfig.launchJobList);
+  const jobs = useMemo(() => (data?.jobTaskList ?? [])
+    .map((job) => ({
+      job,
+      time: job.taskGroup === "SCHEDULE" && job.activeStatus === ActiveStatus.ACTIVE
+        ? getFixedQuartzTimeSeconds(job.cronExpression) ?? Number.MAX_SAFE_INTEGER
+        : Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((a, b) => a.time - b.time || a.job.taskCode.localeCompare(b.job.taskCode))
+    .map(({ job }) => job), [data?.jobTaskList]);
 
   const columns: Column[] = useMemo(() => [
     { id: "taskCode", label: t("job.columns.taskCode"), width: 260 },
@@ -90,36 +94,8 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
   const handleCreateClose = () => {
     setShowCreatePage(false);
     setSelectedJob(null);
-    setPage(1);
+    void refetch();
   };
-
-  useEffect(() => {
-    if (data?.jobTaskList) {
-      if (page === 1) {
-        setAllData(data.jobTaskList);
-      } else {
-        setAllData((prev) => [...prev, ...data.jobTaskList]);
-      }
-
-      const total = data.total || 0;
-      const currentTotal = (page - 1) * pageSize + data.jobTaskList.length;
-      setHasMore(currentTotal < total);
-    }
-  }, [data, page, pageSize]);
-
-  useEffect(() => {
-    if (page === 1 && !showCreatePage) {
-      if (refetch) {
-        refetch();
-      }
-    }
-  }, [page, showCreatePage, refetch]);
-
-  const handleLoadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      setPage((prev) => prev + 1);
-    }
-  }, [isLoading, hasMore]);
 
   if (showCreatePage) {
     return <JobCreatePage menuTree={menuTree} job={selectedJob ?? undefined} onClose={handleCreateClose} />;
@@ -138,12 +114,10 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
       <DynamicFormTable
         pageKey={menuTree.name}
         columns={columns}
-        data={allData}
+        data={jobs}
         loading={isLoading}
         error={isError ? error : null}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
-        enableInfiniteScroll={true}
+        enableInfiniteScroll={false}
         extraRenderProps={{ launchBatchJob }}
         onRowDoubleClick={(row) => {
           setSelectedJob(row as Job);

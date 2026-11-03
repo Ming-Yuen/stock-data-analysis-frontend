@@ -33,7 +33,4 @@ export interface Job {
 
 export interface EnquiryJobResponse extends ApiResponse {
   jobTaskList: Job[];
-  total: number;
-  page: number;
-  pageSize: number;
 }
