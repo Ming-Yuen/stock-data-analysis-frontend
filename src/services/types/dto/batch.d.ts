@@ -26,6 +26,7 @@ export interface Job {
   endTime?: string;
   activeStatus: ActiveStatus;
   lastExecutionStatus: string;
+  lastExecutionDisplayStatus?: string | null;
   lastExecStartTime: string;
   lastExecEndTime: string;
   resultMessage: string;

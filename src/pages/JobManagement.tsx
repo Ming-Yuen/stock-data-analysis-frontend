@@ -64,7 +64,8 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
     {
       id: "lastExecutionStatus", label: t("job.columns.executionResult"), width: 200,
       render: (value: string, row: Job) => {
-        const label = t(`job.executionStatus.${value}`, { defaultValue: getStatusLabel(JobStatus, value) });
+        const status = row.lastExecutionDisplayStatus ?? value;
+        const label = t(`job.executionStatus.${status}`, { defaultValue: getStatusLabel(JobStatus, status) });
         return row.resultMessage
           ? <Tooltip title={row.resultMessage}><span>{label}</span></Tooltip>
           : <span>{label}</span>;
