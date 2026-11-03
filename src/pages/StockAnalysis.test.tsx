@@ -6,7 +6,7 @@ import resources from "../locales/zh-HK.json";
 
 jest.mock("@tanstack/react-query", () => ({ useQuery: jest.fn(), useMutation: jest.fn(), useQueryClient: jest.fn() }));
 jest.mock("react-router-dom", () => ({ useNavigate: () => jest.fn(), useParams: () => ({ figi: "AAPL-FIGI" }) }), { virtual: true });
-jest.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, options?: Record<string, unknown>) => {
+jest.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { resolvedLanguage: "en-GB" }, t: (key: string, options?: Record<string, unknown>) => {
   const strings = require("../locales/zh-HK.json");
   const value = key.split(".").reduce((node: any, part: string) => node?.[part], strings);
   return typeof value === "string" ? value.replace(/{{(.*?)}}/g, (_: string, token: string) => String(options?.[token] ?? "")) : options?.defaultValue ?? key;
@@ -39,6 +39,33 @@ beforeEach(() => {
 function range(kind: "historical" | "industry" | "peer") {
   return within(screen.getByRole("region", { name: resources.analysisReport[kind === "historical" ? "historicalFairValue" : kind === "peer" ? "peerReferenceValue" : "industryFairValue"] }));
 }
+
+test("explains when the market decision and confidence fail the market evidence cutoff", () => {
+  const message = "市場 evidence 在 analysisAsOf 後才公開。";
+  report.confluenceScenarios = {
+    ...unavailable("CONTEXT_FUTURE_MARKET_AVAILABILITY", message),
+    status: "UNVERIFIED",
+    reasons: [{ code: "CONTEXT_FUTURE_MARKET_AVAILABILITY", component: "CONFLUENCE", message }],
+  };
+
+  render(<StockAnalysisPage />);
+
+  const { marketDecision, confidence, states } = resources.analysisReport;
+  expect(within(screen.getByText(marketDecision).parentElement!).getByText(states.UNVERIFIED)).toBeTruthy();
+  expect(within(screen.getByText(confidence).parentElement!).getByText(states.UNVERIFIED)).toBeTruthy();
+  expect(screen.getByText((text) => text.includes(message))).toBeTruthy();
+  expect(screen.getByText("31 Oct 2026, 04:00").getAttribute("datetime")).toBe("2026-10-30T20:00:00Z");
+});
+
+test("displays an untranslated backend status code", () => {
+  report.confluenceScenarios = available({ marketDecision: "NEW_MARKET_DECISION" });
+
+  render(<StockAnalysisPage />);
+
+  expect(screen.getByText("NEW_MARKET_DECISION")).toBeTruthy();
+  expect(within(screen.getByText(resources.analysisReport.confidence).parentElement!)
+    .getByText(resources.analysisReport.stateUnknown)).toBeTruthy();
+});
 
 const futuValuationRow = (metric: string, value: number | null, status = "AVAILABLE") => ({
   metric, value, status, providerSymbol: "US.AAPL", industryCode: "I0001", plateCode: "US.LIST001",

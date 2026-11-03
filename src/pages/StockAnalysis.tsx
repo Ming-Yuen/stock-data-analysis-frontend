@@ -32,7 +32,7 @@ const apiErrorMessage = (err: unknown, fallback: string) => {
 };
 
 export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { figi: routeFigi } = useParams<{ figi: string }>();
   const navigate = useNavigate();
   const figi = stock?.figi ?? routeFigi ?? "";
@@ -103,6 +103,7 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const structure = metric(report.priceStructure);
     const tradePlans = metric(report.tradePlans);
     const confluence = metric(report.confluenceScenarios);
+    const confluenceUnavailable = report.confluenceScenarios.status === "AVAILABLE" ? null : report.confluenceScenarios;
     const plans = tradePlans?.plans ?? [];
     const plan = confluence?.preferredPlanId ? plans.find((candidate) => candidate.planId === confluence.preferredPlanId) ?? null : null;
     const currentPrice = tradePlans?.currentPrice ?? priceSeries?.bars?.[priceSeries.bars.length - 1]?.close ?? null;
@@ -113,7 +114,7 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const position = metric(report.positionDecision);
     const priceDataThrough = tradePlans?.priceDataThrough ?? structure?.priceDataThrough ?? report.eligibility.priceDataThrough ?? null;
     const observationPlans = plans.filter((candidate) => candidate.planId !== plan?.planId);
-    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, plan, observationPlans, rr, market, confluence, position };
+    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, plan, observationPlans, rr, market, confluence, confluenceUnavailable, position };
   }, [report]);
 
   const applyAccountRisk = () => {
@@ -187,7 +188,9 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       <Box>
         <Typography variant="h5" sx={{ fontWeight: 800 }}>{symbol} {t("analysisReport.analysis")}</Typography>
         <Typography variant="body2" color="text.secondary">{t("analysisReport.backend")} · FIGI {figi}</Typography>
-        {report && <Typography variant="caption" color="text.secondary">{t("analysisReport.analysisAsOf")}: {report.context.analysisAsOf} · {t(`analysisReport.horizons.${report.context.horizon}`)}{view?.priceDataThrough ? ` · ${t("analysisReport.priceDataThrough")}: ${view.priceDataThrough}` : ""}{report.eligibility.fundamentalDataThrough ? ` · ${t("analysisReport.fundamentalDataThrough")}: ${report.eligibility.fundamentalDataThrough}` : ""}</Typography>}
+        {report && <Typography variant="caption" color="text.secondary">{t("analysisReport.analysisAsOf")}: <time dateTime={report.context.analysisAsOf}>{new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+          dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Hong_Kong",
+        }).format(new Date(report.context.analysisAsOf))}</time> · {t("dashboard.hongKongTime")} · {t(`analysisReport.horizons.${report.context.horizon}`)}{view?.priceDataThrough ? ` · ${t("analysisReport.priceDataThrough")}: ${view.priceDataThrough}` : ""}{report.eligibility.fundamentalDataThrough ? ` · ${t("analysisReport.fundamentalDataThrough")}: ${report.eligibility.fundamentalDataThrough}` : ""}</Typography>}
       </Box>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
         <FormControl size="small" sx={{ minWidth: 180 }}><InputLabel>{t("analysisReport.horizon")}</InputLabel><Select label={t("analysisReport.horizon")} value={horizon} onChange={(e) => setHorizon(e.target.value as AnalysisHorizon)}><MenuItem value="SWING">{t("analysisReport.horizons.SWING")}</MenuItem><MenuItem value="POSITION">{t("analysisReport.horizons.POSITION")}</MenuItem></Select></FormControl>
@@ -206,11 +209,11 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       <Grid container spacing={2}>
         {[
           [t("analysisReport.latestClose"), fmt(view.currentPrice)],
-          [t("analysisReport.marketDecision"), readableState(t, view.confluence?.marketDecision)],
-          [t("analysisReport.confidence"), readableState(t, view.confluence?.confidence)],
+          [t("analysisReport.marketDecision"), readableState(t, view.confluence?.marketDecision ?? view.confluenceUnavailable?.status)],
+          [t("analysisReport.confidence"), readableState(t, view.confluence?.confidence ?? view.confluenceUnavailable?.status)],
           [t("analysisReport.evidenceScore"), fmt(view.confluence?.evidenceScore, 1)],
           ["RSI 14", fmt(view.market ? metric(view.market.momentum.rsi14) : null)],
-          ["Market", view.market ? metric(view.market.market)?.regime ?? view.market.market.status : "—"],
+          ["Market", view.market ? readableState(t, metric(view.market.market)?.regime ?? view.market.market.status) : "—"],
         ].map(([label, value]) => <Grid key={String(label)} size={{ xs: 6, md: 2 }}><Paper variant="outlined" sx={{ p: 2, height: "100%" }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="h6" sx={{ fontWeight: 700 }}>{value}</Typography></Paper></Grid>)}
       </Grid>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("analysisReport.scoreLimit")}</Typography>
@@ -222,7 +225,9 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
             ? t(`analysisReport.observations.${metric(view.valuation?.industryMarketReference?.priceRange)?.observation?.position}`) : t("analysisReport.observationUnavailable"),
           industry: metric(view.valuation?.industryFairValueRange)?.observation?.position
             ? t(`analysisReport.observations.${metric(view.valuation?.industryFairValueRange)?.observation?.position}`) : t("analysisReport.observationUnavailable"),
-          technical: view.plan ? readableState(t, view.confluence?.marketDecision) : t("analysisReport.noPreferredPlan"),
+          technical: view.confluenceUnavailable?.reasons?.length
+            ? view.confluenceUnavailable.reasons.map((reason) => readableReason(t, reason)).join(" · ")
+            : view.plan ? readableState(t, view.confluence?.marketDecision) : t("analysisReport.noPreferredPlan"),
         })}
       </Alert>
 

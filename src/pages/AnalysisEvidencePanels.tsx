@@ -8,7 +8,7 @@ import { AnalysisReason, FairValueRange, IndustryMarketReference, MetricResult, 
 const number = (value?: number | null) => value == null || !Number.isFinite(value) ? "—" : value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 const metricLabels: Record<string, string> = { PE: "P/E", PB: "P/B", PS: "P/S", EV_EBITDA: "EV/EBITDA" };
 export const readableState = (t: TFunction, code?: string | null) => code
-  ? t(`analysisReport.states.${code}`, { defaultValue: t("analysisReport.stateUnknown") }) : t("analysisReport.stateUnknown");
+  ? t(`analysisReport.states.${code}`, { defaultValue: code }) : t("analysisReport.stateUnknown");
 export const readableReason = (t: TFunction, reason: AnalysisReason) => t(`analysisReport.reasons.${reason.code}`,
   { ...reason.params, defaultValue: reason.message || t("analysisReport.unavailableExplanation") });
 
