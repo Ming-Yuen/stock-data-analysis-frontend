@@ -89,12 +89,14 @@ test("shows Futu observations separately when the internal valuation is unavaila
   expect(valuations.getByText("31.5×")).toBeTruthy();
   expect(valuations.getByText("P/B")).toBeTruthy();
   expect(valuations.getByText(resources.analysisReport.states.INSUFFICIENT_DATA)).toBeTruthy();
+  expect(valuations.getAllByText("31 Oct 2026, 04:10")).toHaveLength(2);
   expect(valuations.queryByText("P/E")).toBeNull();
   const earnings = within(screen.getByRole("table", { name: resources.analysisReport.futu.earnings.title }));
   expect(earnings.getByText("-1.25 USD")).toBeTruthy();
   expect(earnings.getByText("2026 Q4")).toBeTruthy();
   expect(earnings.getByText(resources.analysisReport.futu.periodTypes.QUARTERLY)).toBeTruthy();
-  expect(earnings.getByText("2026-10-30T20:10:00Z")).toBeTruthy();
+  expect(earnings.getByText("31 Oct 2026, 04:10").getAttribute("datetime")).toBe("2026-10-30T20:10:00Z");
+  expect(earnings.getByText("2026-11-05").getAttribute("datetime")).toBe("2026-11-05");
   expect(range("historical").getByText(resources.analysisReport.reasons.VALUATION_SNAPSHOT_REQUIRED)).toBeTruthy();
 });
 

@@ -3,6 +3,7 @@ import { Box, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Ty
 import { useTranslation } from "react-i18next";
 import { FutuObservations, MetricResult } from "../services/types/dto/analysis";
 import { readableReason } from "./AnalysisEvidencePanels";
+import { formatHongKongDateTime } from "../utils/hongKongTime";
 
 const namespace = "analysisReport.futu";
 const number = (value?: number | null) => value == null || !Number.isFinite(value)
@@ -21,7 +22,10 @@ function ObservationPanel<T>({ kind, result, columns, renderRow }: {
   const renderTable = (rows: T[], label: string) => <Box sx={{ overflowX: "auto" }}>
     <Table size="small" aria-label={label}>
       <TableHead><TableRow>{columns.map(column =>
-        <TableCell key={column}>{t(`${namespace}.columns.${column}`)}</TableCell>
+        <TableCell key={column}>
+          {t(`${namespace}.columns.${column}`)}
+          {column === "observedAt" && ` (${t("dashboard.hongKongTime")})`}
+        </TableCell>
       )}</TableRow></TableHead>
       <TableBody>{rows.map(row => {
         const { key, cells } = renderRow(row);
@@ -52,10 +56,12 @@ function ObservationPanel<T>({ kind, result, columns, renderRow }: {
 }
 
 export function FutuObservationPanels({ observations }: { observations: FutuObservations }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const code = (group: string, value?: string | null) => value
     ? t(`${namespace}.${group}.${value}`, { defaultValue: value }) : "—";
   const status = (value: string) => t(`analysisReport.states.${value}`, { defaultValue: value });
+  const observedAt = (value?: string | null) => value
+    ? <time dateTime={value}>{formatHongKongDateTime(value, i18n.resolvedLanguage ?? i18n.language)}</time> : "—";
 
   return <>
     <ObservationPanel kind="valuation" result={observations.valuations}
@@ -65,7 +71,7 @@ export function FutuObservationPanels({ observations }: { observations: FutuObse
         cells: [
           code("metrics", row.metric), row.status === "AVAILABLE" ? multiple(row.value) : "—",
           row.status === "AVAILABLE" ? multiple(row.forwardValue) : "—", row.providerSymbol,
-          row.plateCode, date(row.observedAt), status(row.status),
+          row.plateCode, observedAt(row.observedAt), status(row.status),
         ],
       })} />
     <ObservationPanel kind="earnings" result={observations.earnings}
@@ -76,7 +82,7 @@ export function FutuObservationPanels({ observations }: { observations: FutuObse
           code("metrics", row.metric),
           row.status === "AVAILABLE" && row.value != null ? [number(row.value), row.currency].filter(Boolean).join(" ") : "—",
           row.fiscalPeriod || "—", code("periodTypes", row.periodType), date(row.earningsDate), code("publishTypes", row.publishType),
-          row.providerSymbol, date(row.observedAt), status(row.status),
+          row.providerSymbol, observedAt(row.observedAt), status(row.status),
         ],
       })} />
   </>;

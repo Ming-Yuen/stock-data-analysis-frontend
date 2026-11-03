@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { AccountRiskContext, AnalysisApiResponse, AnalysisHorizon, AnalysisReportData, AnalysisReportRequest, MetricResult, PositionDto, PositionSelectionKind, StockAnalysisReport } from "../services/types/dto/analysis";
 import { FairValuePanel, IndustryMarketPanel, readableReason, readableState, TechnicalIndicatorsPanel } from "./AnalysisEvidencePanels";
 import { FutuObservationPanels } from "./FutuObservationPanels";
+import { formatHongKongDateTime } from "../utils/hongKongTime";
 
 interface StockAnalysisPageProps { stock?: WatchItem; onClose?: () => void; }
 interface PositionFormState { quantity: string; averageCost: string; manualStop: string; basisRef: string; thesis: string; }
@@ -188,9 +189,7 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       <Box>
         <Typography variant="h5" sx={{ fontWeight: 800 }}>{symbol} {t("analysisReport.analysis")}</Typography>
         <Typography variant="body2" color="text.secondary">{t("analysisReport.backend")} · FIGI {figi}</Typography>
-        {report && <Typography variant="caption" color="text.secondary">{t("analysisReport.analysisAsOf")}: <time dateTime={report.context.analysisAsOf}>{new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
-          dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Hong_Kong",
-        }).format(new Date(report.context.analysisAsOf))}</time> · {t("dashboard.hongKongTime")} · {t(`analysisReport.horizons.${report.context.horizon}`)}{view?.priceDataThrough ? ` · ${t("analysisReport.priceDataThrough")}: ${view.priceDataThrough}` : ""}{report.eligibility.fundamentalDataThrough ? ` · ${t("analysisReport.fundamentalDataThrough")}: ${report.eligibility.fundamentalDataThrough}` : ""}</Typography>}
+        {report && <Typography variant="caption" color="text.secondary">{t("analysisReport.analysisAsOf")}: <time dateTime={report.context.analysisAsOf}>{formatHongKongDateTime(report.context.analysisAsOf, i18n.resolvedLanguage ?? i18n.language)}</time> · {t("dashboard.hongKongTime")} · {t(`analysisReport.horizons.${report.context.horizon}`)}{view?.priceDataThrough ? ` · ${t("analysisReport.priceDataThrough")}: ${view.priceDataThrough}` : ""}{report.eligibility.fundamentalDataThrough ? ` · ${t("analysisReport.fundamentalDataThrough")}: ${report.eligibility.fundamentalDataThrough}` : ""}</Typography>}
       </Box>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
         <FormControl size="small" sx={{ minWidth: 180 }}><InputLabel>{t("analysisReport.horizon")}</InputLabel><Select label={t("analysisReport.horizon")} value={horizon} onChange={(e) => setHorizon(e.target.value as AnalysisHorizon)}><MenuItem value="SWING">{t("analysisReport.horizons.SWING")}</MenuItem><MenuItem value="POSITION">{t("analysisReport.horizons.POSITION")}</MenuItem></Select></FormControl>

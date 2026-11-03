@@ -10,6 +10,7 @@ import { Job, TaskGroup } from "../services/types/dto/batch";
 import { ActiveStatus } from "../services/types/enums/ActiveStatus";
 import { MenuTree } from "../services/types/dto/menu";
 import { useTranslation } from "react-i18next";
+import { hongKongDateInputValue } from "../utils/hongKongTime";
 
 interface JobCreatePageProps {
   menuTree: MenuTree;
@@ -74,7 +75,7 @@ const scheduleFromJob = (job?: Job): CronSchedule => {
     selectedDays,
     dayOfMonth: frequency === "monthly" ? dayOfMonth : "1",
     scheduleTime: cronTime,
-    startDate: job?.startTime?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+    startDate: job?.startTime?.slice(0, 10) ?? hongKongDateInputValue(new Date()),
     frequency,
     endDate: job?.endTime?.slice(0, 10) ?? "",
   };
