@@ -621,8 +621,12 @@
     "futu": {
       "valuation": {"title": "富途市場估值觀察", "description": "富途提供的市場倍數與預測倍數，供對照參考。"},
       "earnings": {"title": "富途盈利預期", "description": "富途按財政期間提供的預期數字。幣別及財政期間按來源資料顯示。"},
+      "valuationDetail": {"title": "富途歷史估值與同行比較", "description": "月度 P25、P50、P75 按每個完整月份的最後一筆觀察計算。歷史均值、標準差區間及目前倍數的歷史分位沿用富途摘要。", "peers": "富途同行正值倍數（可包含本股）", "plateRankValue": "第 {{rank}} 位／{{total}}"},
+      "morningstar": {"title": "晨星個股公允價", "description": "經富途取得的晨星個股估值及評級，供第三方對照。"},
       "lastKnown": "上次已知資料",
-      "columns": {"metric": "指標", "value": "市場倍數", "forwardValue": "預測倍數", "expectedValue": "預期數值", "providerSymbol": "來源代碼", "plateCode": "來源板塊", "observedAt": "取得時間", "status": "狀態", "fiscalPeriod": "財政期間", "periodType": "期間類型", "earningsDate": "財報日期", "publishType": "發佈時段"},
+      "columns": {"metric": "指標", "value": "市場倍數", "forwardValue": "預測倍數", "expectedValue": "預期數值", "providerSymbol": "來源代碼", "plateCode": "來源板塊", "observedAt": "取得時間", "status": "狀態", "fiscalPeriod": "財政期間", "periodType": "期間類型", "earningsDate": "財報日期", "publishType": "發佈時段", "sourceUpdatedAt": "來源更新時間", "valuationPercentile": "富途歷史分位", "averageValue": "富途歷史均值", "avgMinus1Stddev": "富途均值減一個標準差", "avgPlus1Stddev": "富途均值加一個標準差", "historicalMonths": "有效月度樣本數", "historyFrom": "月度樣本起始日", "historyThrough": "月度樣本截止日", "q25": "月度 P25", "median": "月度 P50", "q75": "月度 P75", "plateName": "富途產業", "plateAverage": "富途產業平均倍數", "plateRank": "富途產業排名", "fairValue": "公允價", "ratingType": "評級類型", "starRating": "星級", "uncertainty": "不確定性"},
+      "ratingTypes": {"QUALITATIVE": "質化", "QUANTITATIVE": "量化"},
+      "uncertaintyLevels": {"Low": "低", "Medium": "中", "High": "高", "Very High": "很高", "Extreme": "極高"},
       "metrics": {"PE": "P/E", "PB": "P/B", "PS": "P/S", "EPS": "每股盈利（GAAP）", "REVENUE": "營收", "EBIT": "息稅前盈利"},
       "periodTypes": {"QUARTERLY": "季度", "SEMIANNUAL": "半年度", "ANNUAL": "年度"},
       "publishTypes": {"BEFORE_MARKET": "開市前", "AFTER_MARKET": "收市後", "INTRADAY": "交易時段內"}
@@ -740,6 +744,8 @@
     },
     "reasons": {
       "FUTU_NOT_SYNCED": "分析截止時間前未有可用的富途同步紀錄。",
+      "FUTU_SOURCE_TIME_UNVERIFIED": "富途資料的來源更新時間未通過核驗。",
+      "FUTU_EVIDENCE_UNVERIFIED": "富途來源紀錄未通過核驗。",
       "FUTU_SYNC_FAILED": "最近一批富途資料同步失敗。",
       "FUTU_STOCK_NOT_RETURNED": "最新富途估值資料缺少此股票或指標。",
       "FUTU_EXPECTATION_NOT_RETURNED": "最新富途盈利預期資料未有此股票的數值。",

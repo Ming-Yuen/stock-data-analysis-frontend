@@ -120,6 +120,40 @@ export interface FutuEarningsExpectation {
 export interface FutuObservations {
   valuations: MetricResult<FutuValuationObservation[]>;
   earnings: MetricResult<FutuEarningsExpectation[]>;
+  valuationDetail?: MetricResult<FutuValuationDetail> | null;
+  morningstar?: MetricResult<FutuMorningstarObservation> | null;
+}
+export interface FutuValuationDetail {
+  providerSymbol: string;
+  metric?: string | null;
+  sourceUpdatedAt?: string | null;
+  observedAt: string;
+  currentValue?: number | null;
+  averageValue?: number | null;
+  avgMinus1Stddev?: number | null;
+  avgPlus1Stddev?: number | null;
+  valuationPercentile?: number | null;
+  forwardValue?: number | null;
+  historyFrom?: string | null;
+  historyThrough?: string | null;
+  historicalMonths?: number | null;
+  q25?: number | null;
+  median?: number | null;
+  q75?: number | null;
+  plateName?: string | null;
+  plateAverage?: number | null;
+  plateRank?: number | null;
+  plateRankCount?: number | null;
+  peers?: Array<{ symbol: string; value: number }> | null;
+}
+export interface FutuMorningstarObservation {
+  providerSymbol: string;
+  sourceUpdatedAt?: string | null;
+  observedAt: string;
+  fairValue?: number | null;
+  ratingType?: string | null;
+  starRating?: number | null;
+  uncertainty?: string | null;
 }
 export interface StockAnalysisReport {
   context: AnalysisContext; eligibility: AnalysisEligibility; normalizedPrice: MetricResult<NormalizedPriceSeries>;

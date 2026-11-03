@@ -155,8 +155,12 @@
     "futu": {
       "valuation": {"title": "Futu market valuation observations", "description": "Market and forward multiples reported by Futu for comparison."},
       "earnings": {"title": "Futu earnings expectations", "description": "Estimates reported by Futu for each fiscal period, with the currency and period as provided."},
+      "valuationDetail": {"title": "Futu valuation history and peers", "description": "Monthly P25, P50 and P75 use the last observation in each completed month. The historical mean, standard deviation band and current multiple's historical percentile come from Futu's summary.", "peers": "Positive Futu peer multiples (may include this stock)", "plateRankValue": "{{rank}} of {{total}}"},
+      "morningstar": {"title": "Morningstar stock fair value", "description": "Morningstar's stock valuation and rating, retrieved via Futu for external comparison."},
       "lastKnown": "Last known observations",
-      "columns": {"metric": "Metric", "value": "Market multiple", "forwardValue": "Forward multiple", "expectedValue": "Estimate", "providerSymbol": "Provider symbol", "plateCode": "Provider sector", "observedAt": "Retrieved at", "status": "Status", "fiscalPeriod": "Fiscal period", "periodType": "Period type", "earningsDate": "Earnings date", "publishType": "Release timing"},
+      "columns": {"metric": "Metric", "value": "Market multiple", "forwardValue": "Forward multiple", "expectedValue": "Estimate", "providerSymbol": "Provider symbol", "plateCode": "Provider sector", "observedAt": "Retrieved at", "status": "Status", "fiscalPeriod": "Fiscal period", "periodType": "Period type", "earningsDate": "Earnings date", "publishType": "Release timing", "sourceUpdatedAt": "Source updated at", "valuationPercentile": "Futu historical percentile", "averageValue": "Futu historical mean", "avgMinus1Stddev": "Futu mean minus one standard deviation", "avgPlus1Stddev": "Futu mean plus one standard deviation", "historicalMonths": "Valid monthly samples", "historyFrom": "First monthly sample date", "historyThrough": "Last monthly sample date", "q25": "Monthly P25", "median": "Monthly P50", "q75": "Monthly P75", "plateName": "Futu industry", "plateAverage": "Futu industry mean multiple", "plateRank": "Futu industry rank", "fairValue": "Fair value", "ratingType": "Rating type", "starRating": "Star rating", "uncertainty": "Uncertainty"},
+      "ratingTypes": {"QUALITATIVE": "Qualitative", "QUANTITATIVE": "Quantitative"},
+      "uncertaintyLevels": {"Low": "Low", "Medium": "Medium", "High": "High", "Very High": "Very high", "Extreme": "Extreme"},
       "metrics": {"PE": "P/E", "PB": "P/B", "PS": "P/S", "EPS": "Earnings per share (GAAP)", "REVENUE": "Revenue", "EBIT": "EBIT"},
       "periodTypes": {"QUARTERLY": "Quarter", "SEMIANNUAL": "Half year", "ANNUAL": "Year"},
       "publishTypes": {"BEFORE_MARKET": "Before market open", "AFTER_MARKET": "After market close", "INTRADAY": "During market hours"}
@@ -274,6 +278,8 @@
     },
     "reasons": {
       "FUTU_NOT_SYNCED": "No Futu sync result was available by the analysis cutoff.",
+      "FUTU_SOURCE_TIME_UNVERIFIED": "The Futu source update time could not be verified.",
+      "FUTU_EVIDENCE_UNVERIFIED": "The Futu source record could not be verified.",
       "FUTU_SYNC_FAILED": "The latest Futu batch failed to sync.",
       "FUTU_STOCK_NOT_RETURNED": "The latest Futu valuation data omitted this stock or metric.",
       "FUTU_EXPECTATION_NOT_RETURNED": "The latest Futu earnings expectations did not include a value for this stock.",

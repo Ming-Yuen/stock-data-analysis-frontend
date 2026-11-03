@@ -120,6 +120,69 @@ test("labels older Futu valuations separately and explains an expired earnings w
   expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
 });
 
+test("shows Futu historical multiples and Morningstar fair value independently of the internal valuation", () => {
+  report.valuation = unavailable("VALUATION_SNAPSHOT_REQUIRED");
+  report.futuObservations = {
+    valuations: available([]),
+    earnings: available([]),
+    valuationDetail: available({
+      providerSymbol: "US.AAPL", metric: "PE", currentValue: 37.017, forwardValue: 35.679,
+      averageValue: 31.409, avgMinus1Stddev: 26.519, avgPlus1Stddev: 36.299, valuationPercentile: 85.55,
+      q25: 28.0815, median: 31.761, q75: 35.234, historicalMonths: 60,
+      historyFrom: "2021-11-30", historyThrough: "2026-10-30",
+      sourceUpdatedAt: "2026-10-30T20:00:00Z", observedAt: "2026-10-30T20:10:00Z",
+      plateName: "Consumer Electronics", plateRank: 3, plateRankCount: 3,
+      peers: [{ symbol: "AAPL", value: 37.017 }, { symbol: "SONO", value: 35.444 }],
+    }),
+    morningstar: available({
+      providerSymbol: "US.AAPL", sourceUpdatedAt: "2026-10-28T20:00:00Z", observedAt: "2026-10-30T20:10:00Z",
+      fairValue: 290, starRating: 2, ratingType: "QUALITATIVE", uncertainty: "Medium",
+    }),
+  };
+
+  render(<StockAnalysisPage />);
+
+  const { valuationDetail, morningstar, uncertaintyLevels } = resources.analysisReport.futu;
+  const history = within(screen.getByRole("region", { name: valuationDetail.title }));
+  expect(history.getByText("28.0815×")).toBeTruthy();
+  expect(history.getByText("36.299×")).toBeTruthy();
+  expect(history.getByText("85.55%")).toBeTruthy();
+  expect(history.getByText("第 3 位／3")).toBeTruthy();
+  expect(history.getByText("2026-10-30").getAttribute("datetime")).toBe("2026-10-30");
+  expect(history.getByText("31 Oct 2026, 04:00").getAttribute("datetime")).toBe("2026-10-30T20:00:00Z");
+  expect(history.getByText("31 Oct 2026, 04:10").getAttribute("datetime")).toBe("2026-10-30T20:10:00Z");
+  expect(within(history.getByRole("table", { name: valuationDetail.peers })).getByText("SONO")).toBeTruthy();
+  const research = within(screen.getByRole("region", { name: morningstar.title }));
+  expect(research.getByText("290")).toBeTruthy();
+  expect(research.getByText(uncertaintyLevels.Medium)).toBeTruthy();
+  expect(range("historical").getByText(resources.analysisReport.reasons.VALUATION_SNAPSHOT_REQUIRED)).toBeTruthy();
+});
+
+test("labels a previous Morningstar observation when the current source time is unverified", () => {
+  report.futuObservations = {
+    valuations: available([]),
+    earnings: available([]),
+    valuationDetail: unavailable("FUTU_NOT_SYNCED"),
+    morningstar: {
+      ...unavailable("FUTU_SOURCE_TIME_UNVERIFIED"),
+      status: "UNVERIFIED",
+      value: { providerSymbol: "US.AAPL", fairValue: 300, observedAt: "2026-10-30T20:10:00Z" },
+      lastKnown: { providerSymbol: "US.AAPL", fairValue: 290, observedAt: "2026-10-28T20:10:00Z" },
+    },
+  };
+
+  render(<StockAnalysisPage />);
+
+  const { valuationDetail, morningstar, lastKnown } = resources.analysisReport.futu;
+  const research = within(screen.getByRole("region", { name: morningstar.title }));
+  expect(research.getByText(resources.analysisReport.reasons.FUTU_SOURCE_TIME_UNVERIFIED)).toBeTruthy();
+  expect(research.getByText(lastKnown)).toBeTruthy();
+  expect(research.getByText("290")).toBeTruthy();
+  expect(research.queryByText("300")).toBeNull();
+  expect(within(screen.getByRole("region", { name: valuationDetail.title }))
+    .getByText(resources.analysisReport.reasons.FUTU_NOT_SYNCED)).toBeTruthy();
+});
+
 test.each(["VALUATION_SNAPSHOT_REQUIRED", "VALUATION_SNAPSHOT_INPUT_MISMATCH", "VALUATION_SNAPSHOT_NOT_YET_AVAILABLE"] as const)(
   "shows saved-valuation failure %s without reusing prices from another result", (code) => {
     report.valuation = {
