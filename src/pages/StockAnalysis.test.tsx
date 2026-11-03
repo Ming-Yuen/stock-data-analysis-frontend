@@ -12,6 +12,7 @@ jest.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { resolvedLan
   return typeof value === "string" ? value.replace(/{{(.*?)}}/g, (_: string, token: string) => String(options?.[token] ?? "")) : options?.defaultValue ?? key;
 } }) }));
 jest.mock("../services/apiClient", () => ({ apiClient: { get: jest.fn(), post: jest.fn(), put: jest.fn() } }));
+jest.mock("./IndustryValuationProposalPanel", () => ({ IndustryValuationProposalPanel: () => null }));
 
 const unavailable = (code: string, message = code) => ({ status: "INSUFFICIENT_DATA", value: null,
   reasons: [{ code, component: "VALUATION", message }], evidenceRefs: [] });
@@ -65,6 +66,56 @@ test("displays an untranslated backend status code", () => {
   expect(screen.getByText("NEW_MARKET_DECISION")).toBeTruthy();
   expect(within(screen.getByText(resources.analysisReport.confidence).parentElement!)
     .getByText(resources.analysisReport.stateUnknown)).toBeTruthy();
+});
+
+test("shows backend reasons when available confluence has no preferred plan", () => {
+  const message = "沒有可評估的技術計劃；不能為了輸出 BUY 製造價位。";
+  report.confluenceScenarios = available({ marketDecision: "WAIT", confidence: "UNAVAILABLE", preferredPlanId: null,
+    reasons: [{ code: "NO_EXECUTABLE_TECHNICAL_PLAN", component: "CONFLUENCE", message }] });
+
+  render(<StockAnalysisPage />);
+
+  expect(screen.getByText(message)).toBeTruthy();
+  expect(within(screen.getByText(resources.analysisReport.marketDecision).parentElement!)
+    .getByText(resources.analysisReport.states.WAIT)).toBeTruthy();
+  expect(within(screen.getByText(resources.analysisReport.confidence).parentElement!)
+    .getByText(resources.analysisReport.states.UNAVAILABLE)).toBeTruthy();
+  expect(within(screen.getByRole("region", { name: resources.analysisReport.preferredTechnicalPlan }))
+    .getByText(resources.analysisReport.noPreferredPlan)).toBeTruthy();
+});
+
+test("shows outer and available-value trade plan reasons without repeating the same explanation", () => {
+  const outer = { code: "PLAN_SOURCE_LIMIT", component: "TRADE_PLAN", message: "來源限制仍然適用。" };
+  const inner = { code: "PLAN_INPUT_UNAVAILABLE", component: "TRADE_PLAN", message: "支撐實際強度 12，最低需要 30。" };
+  report.tradePlans = { ...available({ plans: [], currentPrice: 100, reasons: [outer, inner] }), reasons: [outer] };
+
+  render(<StockAnalysisPage />);
+
+  expect(screen.getAllByText(outer.message)).toHaveLength(1);
+  expect(screen.getByText(inner.message)).toBeTruthy();
+});
+
+test("keeps unavailable payload reasons and prices hidden while showing outer trade plan reasons", () => {
+  report.confluenceScenarios = { ...unavailable("CONFLUENCE_UNVERIFIED"), status: "UNVERIFIED",
+    value: { preferredPlanId: "old-plan", reasons: [{ code: "OLD_CONFLUENCE", component: "CONFLUENCE", message: "舊決策原因" }] } };
+  report.tradePlans = { ...unavailable("PLAN_SOURCE_STALE", "技術計劃來源已過期。"), status: "STALE",
+    value: { plans: [{ planId: "old-plan", entryRange: { lower: 90, upper: 95 } }],
+      reasons: [{ code: "OLD_PLAN", component: "TRADE_PLAN", message: "舊計劃原因" }] } };
+
+  render(<StockAnalysisPage />);
+
+  expect(screen.getByText("技術計劃來源已過期。")).toBeTruthy();
+  expect(screen.queryByText("舊決策原因")).toBeNull();
+  expect(screen.queryByText("舊計劃原因")).toBeNull();
+  expect(screen.queryByText("90.00 – 95.00")).toBeNull();
+});
+
+test("shows placeholders for empty support and resistance lists", () => {
+  report.supportResistance = available({ supports: [], resistances: [], containingZones: [], reasons: [] });
+
+  render(<StockAnalysisPage />);
+
+  expect(within(screen.getByText(resources.analysisReport.levels).parentElement!).getAllByText("—")).toHaveLength(2);
 });
 
 const futuValuationRow = (metric: string, value: number | null, status = "AVAILABLE") => ({

@@ -1,4 +1,14 @@
 {
+  "industryProposal": {
+    "publishedDate": "Source published",
+    "title": "AI industry valuation proposal", "description": "Review the industry assumptions and their sources. A draft takes effect only after your approval. Approval applies to the whole industry; this screen recalculates the current stock.",
+    "current": "Active settings", "proposal": "Latest proposal", "model": "Business valuation model", "metric": "Fixed primary metric", "range": "Proposed multiple range", "asOf": "Assessment date", "createdAt": "Created (Hong Kong time)", "noRationale": "No rationale supplied.", "noProposal": "No proposal has been generated.", "industryMissing": "The backend has not provided an industry for this stock.",
+    "approvalNotice": "Approving saves these assumptions as the industry's active settings and starts recalculation for this stock.", "refresh": "Refresh status", "propose": "Generate AI draft", "approve": "Approve and recalculate this stock",
+    "jobUnavailable": "The valuation job is unavailable. The assumptions may be approved, but recalculation has not been confirmed.", "jobFailed": "The valuation job failed. Approved settings remain saved.", "reportMismatch": "The report does not yet match the approved assumptions. Recalculation is not confirmed.",
+    "status": { "PENDING": "Queued", "PROCESSING": "Generating", "DRAFT": "Draft — awaiting your approval", "FAILED": "Generation failed", "APPROVED": "Approved" },
+    "recalculation": { "QUEUED": "Approved. Recalculation is queued or running; checking the resulting report.", "CONFIRMED": "The refreshed report matches the approved assumptions.", "UNCONFIRMED": "Approved settings are saved, but this stock's report has not been verified against them.", "FAILED": "Approved settings are saved. Recalculation or verification failed; check the reason before retrying." },
+    "codes": { "NON_FINANCIAL_OPERATING": "Non-financial operating business", "BANK": "Bank", "INSURANCE": "Insurance", "REIT": "REIT", "UNKNOWN": "Unclassified", "PE": "P/E", "PB": "P/B", "PS": "P/S", "EV_EBITDA": "EV/EBITDA" }
+  },
   "stockAnalysisExtra": {
     "debtPerShare": "Debt per share (carrying value)",
     "epsCalculationMethod": "TTM EPS calculation method",

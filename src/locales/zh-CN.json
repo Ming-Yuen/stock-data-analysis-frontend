@@ -1,4 +1,14 @@
 {
+  "industryProposal": {
+    "publishedDate": "来源发布日期",
+    "title": "AI 产业估值提案", "description": "请核对产业假设与来源；草稿只会在你批准后生效。批准会更新整个产业的正式设置，此画面只重算当前股票。",
+    "current": "正式设置", "proposal": "最新提案", "model": "业务估值模型", "metric": "固定主要指标", "range": "建议倍数范围", "asOf": "评估日期", "createdAt": "建立时间（香港时间）", "noRationale": "尚未提供理由。", "noProposal": "尚未产生提案。", "industryMissing": "后端尚未提供这只股票的产业。",
+    "approvalNotice": "按批准会把此假设保存为该产业的正式设置，并重算当前股票。", "refresh": "重新读取状态", "propose": "产生 AI 草稿", "approve": "批准并重算当前股票",
+    "jobUnavailable": "当前无法取得估值工作；假设可能已批准，但尚未确认重算。", "jobFailed": "估值工作失败，已批准的设置仍保留。", "reportMismatch": "报告尚未与批准的假设相符，暂不能确认重算完成。",
+    "status": { "PENDING": "排队中", "PROCESSING": "产生中", "DRAFT": "草稿，等待你批准", "FAILED": "产生失败", "APPROVED": "已批准" },
+    "recalculation": { "QUEUED": "已批准，重算正在排队或执行中；完成后会核对报告。", "CONFIRMED": "已重新读取报告，并确认与批准的假设一致。", "UNCONFIRMED": "正式设置已保存，但尚未核实这只股票的报告已采用该假设。", "FAILED": "正式设置已保存；重算或结果核对失败，请先查看原因再重试。" },
+    "codes": { "NON_FINANCIAL_OPERATING": "非金融营运企业", "BANK": "银行", "INSURANCE": "保险", "REIT": "房地产投资信托", "UNKNOWN": "尚未分类", "PE": "P/E", "PB": "P/B", "PS": "P/S", "EV_EBITDA": "EV/EBITDA" }
+  },
   "stockAnalysisExtra": {
     "debtPerShare": "每股债务（账面价值）",
     "epsCalculationMethod": "TTM EPS 计算口径",

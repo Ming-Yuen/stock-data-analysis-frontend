@@ -1,4 +1,14 @@
 {
+  "industryProposal": {
+    "publishedDate": "來源發布日期",
+    "title": "AI 產業估值提案", "description": "請核對產業假設與來源；草稿只會在你批准後生效。批准會更新整個產業的正式設定，此畫面只重算目前股票。",
+    "current": "正式設定", "proposal": "最新提案", "model": "業務估值模型", "metric": "固定主要指標", "range": "建議倍數範圍", "asOf": "評估日期", "createdAt": "建立時間（香港時間）", "noRationale": "尚未提供理由。", "noProposal": "尚未產生提案。", "industryMissing": "後端尚未提供這隻股票的產業。",
+    "approvalNotice": "按批准會把此假設儲存為該產業的正式設定，並重算目前股票。", "refresh": "重新讀取狀態", "propose": "產生 AI 草稿", "approve": "批准並重算目前股票",
+    "jobUnavailable": "目前無法取得估值工作；假設可能已批准，但尚未確認重算。", "jobFailed": "估值工作失敗，已批准的設定仍保留。", "reportMismatch": "報告尚未與批准的假設相符，暫不能確認重算完成。",
+    "status": { "PENDING": "排隊中", "PROCESSING": "產生中", "DRAFT": "草稿，等待你批准", "FAILED": "產生失敗", "APPROVED": "已批准" },
+    "recalculation": { "QUEUED": "已批准，重算正在排隊或執行中；完成後會核對報告。", "CONFIRMED": "已重新讀取報告，並確認與批准的假設一致。", "UNCONFIRMED": "正式設定已儲存，但尚未核實這隻股票的報告已採用該假設。", "FAILED": "正式設定已儲存；重算或結果核對失敗，請先查看原因再重試。" },
+    "codes": { "NON_FINANCIAL_OPERATING": "非金融營運企業", "BANK": "銀行", "INSURANCE": "保險", "REIT": "房地產投資信託", "UNKNOWN": "尚未分類", "PE": "P/E", "PB": "P/B", "PS": "P/S", "EV_EBITDA": "EV/EBITDA" }
+  },
   "stockAnalysisExtra": {
     "debtPerShare": "每股債務（賬面價值）",
     "epsCalculationMethod": "TTM EPS 計算口徑",

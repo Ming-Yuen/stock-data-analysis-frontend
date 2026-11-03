@@ -11,6 +11,7 @@ import { AccountRiskContext, AnalysisApiResponse, AnalysisHorizon, AnalysisRepor
 import { FairValuePanel, IndustryMarketPanel, readableReason, readableState, TechnicalIndicatorsPanel } from "./AnalysisEvidencePanels";
 import { FutuObservationPanels } from "./FutuObservationPanels";
 import { formatHongKongDateTime } from "../utils/hongKongTime";
+import { IndustryValuationProposalPanel } from "./IndustryValuationProposalPanel";
 
 interface StockAnalysisPageProps { stock?: WatchItem; onClose?: () => void; }
 interface PositionFormState { quantity: string; averageCost: string; manualStop: string; basisRef: string; thesis: string; }
@@ -105,6 +106,8 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const tradePlans = metric(report.tradePlans);
     const confluence = metric(report.confluenceScenarios);
     const confluenceUnavailable = report.confluenceScenarios.status === "AVAILABLE" ? null : report.confluenceScenarios;
+    const technicalReasons = [...(confluence?.reasons ?? []),
+      ...report.tradePlans.reasons, ...(tradePlans?.reasons ?? [])];
     const plans = tradePlans?.plans ?? [];
     const plan = confluence?.preferredPlanId ? plans.find((candidate) => candidate.planId === confluence.preferredPlanId) ?? null : null;
     const currentPrice = tradePlans?.currentPrice ?? priceSeries?.bars?.[priceSeries.bars.length - 1]?.close ?? null;
@@ -115,7 +118,7 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
     const position = metric(report.positionDecision);
     const priceDataThrough = tradePlans?.priceDataThrough ?? structure?.priceDataThrough ?? report.eligibility.priceDataThrough ?? null;
     const observationPlans = plans.filter((candidate) => candidate.planId !== plan?.planId);
-    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, plan, observationPlans, rr, market, confluence, confluenceUnavailable, position };
+    return { currentPrice, priceDataThrough, priceSeries, structure, levels, valuation, plan, observationPlans, rr, market, confluence, confluenceUnavailable, technicalReasons, position };
   }, [report]);
 
   const applyAccountRisk = () => {
@@ -234,6 +237,10 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
         <Grid size={{ xs: 12, md: 6 }} sx={{ order: 2 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}>
           <Stack direction="row" spacing={1} alignItems="center"><ShowChart color="primary" /><Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.technicalTradePlan")}</Typography>{view.plan && <Chip size="small" label={readableState(t, view.plan.status)} />}</Stack>
           <Divider sx={{ my: 2 }} />
+          {!!view.technicalReasons.length && <Alert severity="info" sx={{ mb: 2 }}><Stack spacing={0.5}>
+            {Array.from(new Set(view.technicalReasons.map((reason) => readableReason(t, reason)))).map((message) =>
+              <Typography key={message} variant="body2">{message}</Typography>)}
+          </Stack></Alert>}
           <Box component="section" aria-label={t("analysisReport.preferredTechnicalPlan")}>
           {!view.plan ? <Typography color="text.secondary">{view.confluence?.preferredPlanId ? t("analysisReport.preferredPlanMissing") : t("analysisReport.noPreferredPlan")}</Typography> : <Stack spacing={1}>
             <Typography>{t("analysisReport.technicalEntry")}: <b>{view.plan.entryRange ? `${fmt(view.plan.entryRange.lower)} – ${fmt(view.plan.entryRange.upper)}` : "—"}</b></Typography>
@@ -277,6 +284,10 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
             return <Box key={range.key}>
               {index > 0 && <Divider sx={{ my: 2 }} />}
               <FairValuePanel title={t(`analysisReport.${range.key}`)} result={range.result} fallbackStatus={report.valuation.status} fallbackReasons={report.valuation.reasons} kind={range.kind} peerReference={range.kind === "peer" ? view.valuation?.industryMarketReference : null} />
+              {range.kind === "scenario" && <IndustryValuationProposalPanel
+                key={`${figi}:${view.valuation?.industryMarketReference?.industryCode ?? ""}`}
+                figi={figi} industryCode={view.valuation?.industryMarketReference?.industryCode}
+                reloadReport={async () => (await reportQuery.refetch()).data?.report ?? null} />}
             </Box>;
           })}
         </Paper></Grid>
@@ -296,8 +307,8 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
 
       <Grid container spacing={2} sx={{ mt: 0.5 }}>
         <Grid size={{ xs: 12, md: 6 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}><Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.levels")}</Typography><Divider sx={{ my: 2 }} />
-          <Typography variant="body2" color="text.secondary">{t("analysisReport.support")}</Typography>{view.levels?.supports?.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{t(`analysisReport.strengths.${zone.strengthLabel}`)}] · {readableState(t, zone.timeframe)} · {t("analysisReport.testCount", { count: zone.testCount })}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) ?? <Typography>—</Typography>}
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>{t("analysisReport.resistance")}</Typography>{view.levels?.resistances?.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{t(`analysisReport.strengths.${zone.strengthLabel}`)}] · {readableState(t, zone.timeframe)} · {t("analysisReport.testCount", { count: zone.testCount })}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) ?? <Typography>—</Typography>}
+          <Typography variant="body2" color="text.secondary">{t("analysisReport.support")}</Typography>{view.levels?.supports?.length ? view.levels.supports.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{t(`analysisReport.strengths.${zone.strengthLabel}`)}] · {readableState(t, zone.timeframe)} · {t("analysisReport.testCount", { count: zone.testCount })}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) : <Typography>—</Typography>}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>{t("analysisReport.resistance")}</Typography>{view.levels?.resistances?.length ? view.levels.resistances.slice(0, 3).map((zone) => <Typography key={zone.id}>{fmt(zone.lower)}–{fmt(zone.upper)} [{t(`analysisReport.strengths.${zone.strengthLabel}`)}] · {readableState(t, zone.timeframe)} · {t("analysisReport.testCount", { count: zone.testCount })}{zone.lastTestAt ? ` · ${zone.lastTestAt}` : ""}</Typography>) : <Typography>—</Typography>}
         </Paper></Grid>
         <Grid size={{ xs: 12, md: 6 }}><Paper variant="outlined" sx={{ p: 3, height: "100%" }}><Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.positionDecision")}</Typography><Divider sx={{ my: 2 }} />
           {view.position ? <><Typography variant="h4" sx={{ fontWeight: 800 }}>{readableState(t, view.position.action)}</Typography><Typography color="text.secondary">{view.position.reasons?.length ? view.position.reasons.map((reason) => readableReason(t, reason)).join(" · ") : view.position.primaryReason}</Typography>{view.position.suggestedQuantity != null && <Typography sx={{ mt: 1 }}>{t("analysisReport.suggestedQuantity")}: {fmt(view.position.suggestedQuantity, 4)}</Typography>}</>
