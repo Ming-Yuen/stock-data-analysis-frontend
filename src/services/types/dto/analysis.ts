@@ -108,11 +108,25 @@ export interface PositionDecision {
   suggestedQuantity?: number | null; currentExposurePercent?: number | null; riskBudgetAmount?: number | null;
   primaryReason: string; reasons: AnalysisReason[]; evidenceRefs: string[]; positionKnown: boolean;
 }
+export interface FutuValuationObservation {
+  metric: string; status: MetricStatus; value: number | null; forwardValue?: number | null;
+  observedAt: string; providerSymbol: string; industryCode: string; plateCode: string;
+}
+export interface FutuEarningsExpectation {
+  metric: string; status: MetricStatus; value: number | null; currency?: string | null;
+  fiscalPeriod?: string | null; periodType?: string | null; earningsDate?: string | null;
+  publishType?: string | null; observedAt: string; providerSymbol: string;
+}
+export interface FutuObservations {
+  valuations: MetricResult<FutuValuationObservation[]>;
+  earnings: MetricResult<FutuEarningsExpectation[]>;
+}
 export interface StockAnalysisReport {
   context: AnalysisContext; eligibility: AnalysisEligibility; normalizedPrice: MetricResult<NormalizedPriceSeries>;
   priceStructure: MetricResult<PriceStructure>; supportResistance: MetricResult<SupportResistance>; valuation: MetricResult<HistoricalValuation>;
   marketContext: MetricResult<MarketContext>; tradePlans: MetricResult<TradePlanResult>; confluenceScenarios: MetricResult<ConfluenceScenario>;
   positionDecision: MetricResult<PositionDecision>; snapshotId?: string | null; reasons: AnalysisReason[];
+  futuObservations?: FutuObservations | null;
 }
 
 export interface AnalysisApiError { code: string; fieldErrors: Record<string, string>; requestId: string; }

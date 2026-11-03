@@ -40,6 +40,57 @@ function range(kind: "historical" | "industry" | "peer") {
   return within(screen.getByRole("region", { name: resources.analysisReport[kind === "historical" ? "historicalFairValue" : kind === "peer" ? "peerReferenceValue" : "industryFairValue"] }));
 }
 
+const futuValuationRow = (metric: string, value: number | null, status = "AVAILABLE") => ({
+  metric, value, status, providerSymbol: "US.AAPL", industryCode: "I0001", plateCode: "US.LIST001",
+  observedAt: "2026-10-30T20:10:00Z",
+});
+
+test("shows Futu observations separately when the internal valuation is unavailable", () => {
+  report.valuation = unavailable("VALUATION_SNAPSHOT_REQUIRED");
+  report.futuObservations = {
+    valuations: available([futuValuationRow("NEW_METRIC", 31.5), futuValuationRow("PB", null, "INSUFFICIENT_DATA")]),
+    earnings: available([
+      { metric: "EPS", status: "AVAILABLE", value: -1.25, currency: "USD", fiscalPeriod: "2026 Q4", periodType: "QUARTERLY",
+        publishType: "AFTER_MARKET", earningsDate: "2026-11-05", observedAt: "2026-10-30T20:10:00Z", providerSymbol: "US.AAPL" },
+    ]),
+  };
+
+  render(<StockAnalysisPage />);
+
+  const valuations = within(screen.getByRole("table", { name: resources.analysisReport.futu.valuation.title }));
+  expect(valuations.getByText("NEW_METRIC")).toBeTruthy();
+  expect(valuations.getByText("31.5×")).toBeTruthy();
+  expect(valuations.getByText("P/B")).toBeTruthy();
+  expect(valuations.getByText(resources.analysisReport.states.INSUFFICIENT_DATA)).toBeTruthy();
+  expect(valuations.queryByText("P/E")).toBeNull();
+  const earnings = within(screen.getByRole("table", { name: resources.analysisReport.futu.earnings.title }));
+  expect(earnings.getByText("-1.25 USD")).toBeTruthy();
+  expect(earnings.getByText("2026 Q4")).toBeTruthy();
+  expect(earnings.getByText(resources.analysisReport.futu.periodTypes.QUARTERLY)).toBeTruthy();
+  expect(earnings.getByText("2026-10-30T20:10:00Z")).toBeTruthy();
+  expect(range("historical").getByText(resources.analysisReport.reasons.VALUATION_SNAPSHOT_REQUIRED)).toBeTruthy();
+});
+
+test("labels older Futu valuations separately and explains an expired earnings window", () => {
+  report.futuObservations = {
+    valuations: {
+      ...unavailable("FUTU_SYNC_FAILED"), status: "STALE",
+      lastKnown: [futuValuationRow("PE", 31.5)],
+    },
+    earnings: { ...unavailable("FUTU_WINDOW_EXPIRED"), status: "STALE" },
+  };
+
+  render(<StockAnalysisPage />);
+
+  const { valuation, earnings, lastKnown } = resources.analysisReport.futu;
+  expect(screen.queryByRole("table", { name: valuation.title })).toBeNull();
+  expect(within(screen.getByRole("table", { name: `${valuation.title} · ${lastKnown}` })).getByText("31.5×")).toBeTruthy();
+  expect(screen.getByText(resources.analysisReport.reasons.FUTU_SYNC_FAILED)).toBeTruthy();
+  expect(screen.queryByRole("table", { name: earnings.title })).toBeNull();
+  expect(screen.getByText(resources.analysisReport.reasons.FUTU_WINDOW_EXPIRED)).toBeTruthy();
+  expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
+});
+
 test.each(["VALUATION_SNAPSHOT_REQUIRED", "VALUATION_SNAPSHOT_INPUT_MISMATCH", "VALUATION_SNAPSHOT_NOT_YET_AVAILABLE"] as const)(
   "shows saved-valuation failure %s without reusing prices from another result", (code) => {
     report.valuation = {

@@ -152,6 +152,15 @@
     "primaryMetric": "Primary valuation metric",
     "marketAsOf": "Market comparison date",
     "marketReferenceUnavailable": "No same-date verified industry market comparison is available.",
+    "futu": {
+      "valuation": {"title": "Futu market valuation observations", "description": "Market and forward multiples reported by Futu for comparison."},
+      "earnings": {"title": "Futu earnings expectations", "description": "Estimates reported by Futu for each fiscal period, with the currency and period as provided."},
+      "lastKnown": "Last known observations",
+      "columns": {"metric": "Metric", "value": "Market multiple", "forwardValue": "Forward multiple", "expectedValue": "Estimate", "providerSymbol": "Provider symbol", "plateCode": "Provider sector", "observedAt": "Retrieved at", "status": "Status", "fiscalPeriod": "Fiscal period", "periodType": "Period type", "earningsDate": "Earnings date", "publishType": "Release timing"},
+      "metrics": {"PE": "P/E", "PB": "P/B", "PS": "P/S", "EPS": "Earnings per share (GAAP)", "REVENUE": "Revenue", "EBIT": "EBIT"},
+      "periodTypes": {"QUARTERLY": "Quarter", "SEMIANNUAL": "Half year", "ANNUAL": "Year"},
+      "publishTypes": {"BEFORE_MARKET": "Before market open", "AFTER_MARKET": "After market close", "INTRADAY": "During market hours"}
+    },
     "technicalIndicators": "Technical indicators and interpretation",
     "indicator": "Indicator / parameters",
     "indicatorValue": "Value / unit",
@@ -264,6 +273,12 @@
       "MEASURE_ONLY": "A descriptive measurement; combine it with trend and risk context."
     },
     "reasons": {
+      "FUTU_NOT_SYNCED": "No Futu sync result was available by the analysis cutoff.",
+      "FUTU_SYNC_FAILED": "The latest Futu batch failed to sync.",
+      "FUTU_STOCK_NOT_RETURNED": "The latest Futu valuation data omitted this stock or metric.",
+      "FUTU_EXPECTATION_NOT_RETURNED": "The latest Futu earnings expectations did not include a value for this stock.",
+      "FUTU_WINDOW_EXPIRED": "The latest Futu earnings window ended before the analysis date.",
+      "FUTU_FISCAL_PERIOD_UNVERIFIED": "The fiscal period or currency has not been verified.",
       "CANDIDATE_VALUATION_NOT_PRECOMPUTED": "No saved valuation exists for this technical entry price. Its valuation comparison remains unverified.",
       "VALUATION_SNAPSHOT_REQUIRED": "No saved valuation exists for this trading date. Run the daily valuation job first.",
       "VALUATION_SNAPSHOT_INPUT_MISMATCH": "The saved valuation does not match this stock, date, close price or verified price/share basis.",

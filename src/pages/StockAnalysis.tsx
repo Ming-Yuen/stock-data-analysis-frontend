@@ -9,6 +9,7 @@ import { apiConfig } from "../apiConfig";
 import { useTranslation } from "react-i18next";
 import { AccountRiskContext, AnalysisApiResponse, AnalysisHorizon, AnalysisReportData, AnalysisReportRequest, MetricResult, PositionDto, PositionSelectionKind, StockAnalysisReport } from "../services/types/dto/analysis";
 import { FairValuePanel, IndustryMarketPanel, readableReason, readableState, TechnicalIndicatorsPanel } from "./AnalysisEvidencePanels";
+import { FutuObservationPanels } from "./FutuObservationPanels";
 
 interface StockAnalysisPageProps { stock?: WatchItem; onClose?: () => void; }
 interface PositionFormState { quantity: string; averageCost: string; manualStop: string; basisRef: string; thesis: string; }
@@ -278,6 +279,7 @@ export function StockAnalysisPage({ stock, onClose }: StockAnalysisPageProps) {
       </Grid>
 
       <IndustryMarketPanel reference={view.valuation?.industryMarketReference} />
+      {report.futuObservations && <FutuObservationPanels observations={report.futuObservations} />}
       {view.structure?.timeframes?.length ? <Paper variant="outlined" sx={{ p: 3, mt: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>{t("analysisReport.timeframes")}</Typography><Divider sx={{ my: 2 }} />
         <Grid container spacing={2}>{view.structure.timeframes.map((tf) => <Grid key={tf.timeframe} size={{ xs: 12, md: 4 }}>

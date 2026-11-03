@@ -618,6 +618,15 @@
     "primaryMetric": "主要估值指標",
     "marketAsOf": "市場比較日期",
     "marketReferenceUnavailable": "尚無同一日期且已核驗的同行市場比較。",
+    "futu": {
+      "valuation": {"title": "富途市場估值觀察", "description": "富途提供的市場倍數與預測倍數，供對照參考。"},
+      "earnings": {"title": "富途盈利預期", "description": "富途按財政期間提供的預期數字。幣別及財政期間按來源資料顯示。"},
+      "lastKnown": "上次已知資料",
+      "columns": {"metric": "指標", "value": "市場倍數", "forwardValue": "預測倍數", "expectedValue": "預期數值", "providerSymbol": "來源代碼", "plateCode": "來源板塊", "observedAt": "取得時間", "status": "狀態", "fiscalPeriod": "財政期間", "periodType": "期間類型", "earningsDate": "財報日期", "publishType": "發佈時段"},
+      "metrics": {"PE": "P/E", "PB": "P/B", "PS": "P/S", "EPS": "每股盈利（GAAP）", "REVENUE": "營收", "EBIT": "息稅前盈利"},
+      "periodTypes": {"QUARTERLY": "季度", "SEMIANNUAL": "半年度", "ANNUAL": "年度"},
+      "publishTypes": {"BEFORE_MARKET": "開市前", "AFTER_MARKET": "收市後", "INTRADAY": "交易時段內"}
+    },
     "technicalIndicators": "技術指標及解說",
     "indicator": "指標／參數",
     "indicatorValue": "數值／單位",
@@ -730,6 +739,12 @@
       "MEASURE_ONLY": "這是描述性量度，應連同趨勢與風險條件閱讀。"
     },
     "reasons": {
+      "FUTU_NOT_SYNCED": "分析截止時間前未有可用的富途同步紀錄。",
+      "FUTU_SYNC_FAILED": "最近一批富途資料同步失敗。",
+      "FUTU_STOCK_NOT_RETURNED": "最新富途估值資料缺少此股票或指標。",
+      "FUTU_EXPECTATION_NOT_RETURNED": "最新富途盈利預期資料未有此股票的數值。",
+      "FUTU_WINDOW_EXPIRED": "最新富途盈利預期的查詢窗口早於分析日期結束。",
+      "FUTU_FISCAL_PERIOD_UNVERIFIED": "財政期間或幣別尚未核驗。",
       "CANDIDATE_VALUATION_NOT_PRECOMPUTED": "此技術候選入場價尚無已保存的估值，候選價估值比較維持未核驗。",
       "VALUATION_SNAPSHOT_REQUIRED": "指定交易日尚未保存估值，請先執行每日估值排程。",
       "VALUATION_SNAPSHOT_INPUT_MISMATCH": "已保存估值與本次股票、日期、收盤價或已核驗價格／股份基準不符。",
