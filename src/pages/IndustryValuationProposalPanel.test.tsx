@@ -6,6 +6,7 @@ import { industryValuationApi } from "../services/industryValuationApi";
 import { IndustryValuationApproval, IndustryValuationReview } from "../services/types/dto/industryValuation";
 import { StockAnalysisReport } from "../services/types/dto/analysis";
 import { Job } from "../services/types/dto/batch";
+import { ActiveStatus } from "../services/types/enums/ActiveStatus";
 import resources from "../locales/en.json";
 
 jest.mock("../services/industryValuationApi", () => ({ industryValuationApi: {
@@ -35,7 +36,11 @@ beforeEach(() => {
       completedAt: "2026-11-04T01:01:00Z", approvedAt: null, failureReason: null },
     availableActions: ["PROPOSE", "APPROVE"], unavailabilityReason: null,
   };
-  job = { taskCode: "BACKEND_VALUATION_TASK", taskGroup: "SCHEDULE", lastExecutionStatus: "COMPLETED", lastExecStartTime: "2026-11-04T00:00:00Z" } as Job;
+  job = {
+    id: 1, taskCode: "BACKEND_VALUATION_TASK", taskGroup: "SCHEDULE",
+    jobParams: {}, jobClassPath: "StockValuationSnapshotDailyTask", cronExpression: "0 0 12 * * ?",
+    activeStatus: ActiveStatus.ACTIVE,
+  };
   api.review.mockResolvedValue(review);
   api.job.mockResolvedValue(job);
   api.recalculate.mockResolvedValue();
@@ -123,33 +128,32 @@ test("explicit approval launches once for this FIGI and confirms the updated rep
   expect(api.approve).toHaveBeenCalledTimes(1);
   expect(api.approve).toHaveBeenCalledWith("I43", "draft-id");
   expect(api.recalculate).toHaveBeenCalledWith(job, "NVDA-FIGI");
-  api.job.mockResolvedValue({ ...job, lastExecStartTime: "2026-11-04T02:00:00Z" });
   await advance(3000);
   await waitFor(() => expect(reload).toHaveBeenCalled());
   expect(screen.getAllByText(labels.recalculation.CONFIRMED).length).toBeGreaterThan(0);
 });
 
-test("a completed job with an old report does not claim the approved range is active", async () => {
+test("a stale report stays unconfirmed after polling, and manual refresh shows the mismatch", async () => {
   jest.useFakeTimers();
   api.approve.mockResolvedValue(approved());
   await renderPanel();
   fireEvent.click(screen.getByRole("button", { name: labels.approve }));
   await advance(1);
-  api.job.mockResolvedValue({ ...job, lastExecStartTime: "2026-11-04T02:00:00Z" });
   await advance(3000);
+  expect(reload).toHaveBeenCalled();
   expect(screen.queryByText(labels.recalculation.CONFIRMED)).toBeNull();
-  expect(screen.getByText(labels.reportMismatch)).toBeTruthy();
+  expect(screen.getByText(labels.recalculation.QUEUED)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: labels.refresh }));
+  await waitFor(() => expect(screen.getByText(labels.reportMismatch)).toBeTruthy());
 });
 
-test.each(["PROCESSING", "RUNNING"])("enqueues once while the job is %s, so leaving the page cannot discard the request", async (status) => {
+test("enqueues once using job configuration alone, and leaving the page does not discard the request", async () => {
   jest.useFakeTimers();
   api.approve.mockResolvedValue(approved());
-  const runningJob = { ...job, lastExecutionStatus: status };
-  api.job.mockResolvedValue(runningJob);
   const rendered = await renderPanel();
   fireEvent.click(screen.getByRole("button", { name: labels.approve }));
   await waitFor(() => expect(api.recalculate).toHaveBeenCalledTimes(1));
-  expect(api.recalculate).toHaveBeenCalledWith(runningJob, "NVDA-FIGI");
+  expect(api.recalculate).toHaveBeenCalledWith(job, "NVDA-FIGI");
   rendered.unmount();
   await advance(10000);
   expect(api.recalculate).toHaveBeenCalledTimes(1);

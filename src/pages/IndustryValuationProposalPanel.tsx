@@ -6,7 +6,6 @@ import { industryValuationApi } from "../services/industryValuationApi";
 import { IndustryValuationApproval, IndustryValuationProposal, IndustryValuationReview } from "../services/types/dto/industryValuation";
 import { StockAnalysisReport } from "../services/types/dto/analysis";
 import { formatHongKongDateTime } from "../utils/hongKongTime";
-import { readableReason } from "./AnalysisEvidencePanels";
 
 interface Props {
   industryCode?: string | null;
@@ -16,7 +15,6 @@ interface Props {
 interface Recalculation {
   approval: IndustryValuationApproval;
   phase: "QUEUED" | "CONFIRMED" | "UNCONFIRMED" | "FAILED";
-  previousStart: string | null;
 }
 const errorMessage = (error: unknown) => {
   const value = error as { response?: { data?: { message?: string } }; message?: string };
@@ -29,7 +27,7 @@ const safeUrl = (value: string) => {
 const formatRange = (low?: number | null, high?: number | null) =>
   low == null || high == null ? "—" : `${low.toLocaleString()} – ${high.toLocaleString()} ×`;
 
-/** Job 完成不是數值已更新的證明；同時核對本股報告的正式假設。 */
+/** 只根據本股目前估值報告的正式假設確認核准結果，不依賴 Job 執行歷史。 */
 export function reportMatchesProposal(report: StockAnalysisReport | null, figi: string, code: string, proposal: IndustryValuationProposal): boolean {
   if (report?.context.figi !== figi || report.valuation.status !== "AVAILABLE") return false;
   const result = report.valuation.value?.industryFairValueRange;
@@ -69,25 +67,14 @@ export function IndustryValuationProposalPanel({ industryCode, figi, reloadRepor
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
-        const taskCode = recalculation.approval.recalculationTaskCode;
-        const job = taskCode ? await industryValuationApi.job(taskCode) : null;
+        const report = await reload.current();
         if (cancelled) return;
-        if (!job) throw new Error(t("industryProposal.jobUnavailable"));
-        if (recalculation.phase === "QUEUED" && job.lastExecStartTime && job.lastExecStartTime !== recalculation.previousStart) {
-          if (job.lastExecutionStatus === "FAILED") throw new Error(job.resultMessage || t("industryProposal.jobFailed"));
-          if (job.lastExecutionStatus === "COMPLETED") {
-            const report = await reload.current();
-            if (cancelled) return;
-            const approved = recalculation.approval.review.latestProposal;
-            const matched = !!approved && reportMatchesProposal(report, figi, industryCode!, approved);
-            setRecalculation({ ...recalculation, phase: matched ? "CONFIRMED" : "UNCONFIRMED" });
-            if (!matched) {
-              const reasons = report?.valuation.value?.industryFairValueRange?.reasons ?? report?.valuation.reasons ?? [];
-              setError(reasons.map((reason) => readableReason(t, reason)).join(" · ") || t("industryProposal.reportMismatch"));
-            }
-            return;
-          }
+        const approved = recalculation.approval.review.latestProposal;
+        if (approved && reportMatchesProposal(report, figi, industryCode!, approved)) {
+          setRecalculation({ ...recalculation, phase: "CONFIRMED" });
+          return;
         }
+        // 未匹配代表目前數據尚未確認，不能由排程狀態推斷成功或失敗。
         timer = setTimeout(poll, 3000);
       } catch (failure) {
         if (!cancelled) { setError(errorMessage(failure)); setRecalculation({ ...recalculation, phase: "FAILED" }); }
@@ -95,7 +82,7 @@ export function IndustryValuationProposalPanel({ industryCode, figi, reloadRepor
     };
     timer = setTimeout(poll, 3000);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [recalculation, pendingRecalculation, figi, industryCode, t]);
+  }, [recalculation, pendingRecalculation, figi, industryCode]);
 
   const act = async (action: "PROPOSE" | "APPROVE") => {
     if (commandPending.current || !industryCode || !review?.availableActions.includes(action)) return;
@@ -117,12 +104,12 @@ export function IndustryValuationProposalPanel({ industryCode, figi, reloadRepor
           if (!job) throw new Error(t("industryProposal.jobUnavailable"));
           // 正常 Quartz API 接收一次性 trigger 並排隊；工作提交不依賴頁面繼續掛載。
           await industryValuationApi.recalculate(job, figi);
-          setRecalculation({ approval, phase: "QUEUED", previousStart: job.lastExecStartTime || null });
+          setRecalculation({ approval, phase: "QUEUED" });
         }
       }
     } catch (failure) {
       setError(errorMessage(failure));
-      if (savedApproval) setRecalculation({ approval: savedApproval, phase: "FAILED", previousStart: null });
+      if (savedApproval) setRecalculation({ approval: savedApproval, phase: "FAILED" });
       void reviewQuery.refetch();
     } finally { commandPending.current = false; setBusy(false); }
   };
@@ -137,7 +124,7 @@ export function IndustryValuationProposalPanel({ industryCode, figi, reloadRepor
     try {
       await reviewQuery.refetch();
       const approved = recalculation?.approval.review.latestProposal;
-      if (recalculation && approved && !pendingRecalculation) {
+      if (recalculation && approved) {
         const report = await reload.current();
         const matched = reportMatchesProposal(report, figi, industryCode!, approved);
         setRecalculation({ ...recalculation, phase: matched ? "CONFIRMED" : "UNCONFIRMED" });

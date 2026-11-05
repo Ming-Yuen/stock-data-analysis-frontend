@@ -25,11 +25,6 @@ export interface Job {
   startTime?: string;
   endTime?: string;
   activeStatus: ActiveStatus;
-  lastExecutionStatus: string;
-  lastExecutionDisplayStatus?: string | null;
-  lastExecStartTime: string;
-  lastExecEndTime: string;
-  resultMessage: string;
 }
 
 export interface EnquiryJobResponse extends ApiResponse {

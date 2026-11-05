@@ -7,7 +7,6 @@ import { Job, EnquiryJobResponse } from "../services/types/dto/batch";
 import { apiConfig } from "../apiConfig";
 import { ActiveStatus } from "../services/types/enums/ActiveStatus";
 import { JobCreatePage } from "./JobCreate";
-import { getStatusLabel, JobStatus } from "../services/types/status";
 import { Column } from "../components/DynamicFormTable/DynamicFormTable.types";
 import DynamicFormTable from "../components/DynamicFormTable/DynamicFormTable";
 import { MenuTree } from "../services/types/dto/menu";
@@ -52,24 +51,6 @@ export function JobManagementPage({ menuTree }: JobManagementPageProps) {
     {
       id: "cronExpression", label: t("job.columns.scheduleTime"), width: 220,
       render: (value) => formatQuartzCronExpression(value, t),
-    },
-    {
-      id: "lastExecStartTime", label: t("job.columns.lastExecStartTime"), width: 200,
-      type: "datetime", displayDateFormat: "yyyy-MM-dd HH:mm:ss",
-    },
-    {
-      id: "lastExecEndTime", label: t("job.columns.lastExecEndTime"), width: 200,
-      type: "datetime", displayDateFormat: "yyyy-MM-dd HH:mm:ss",
-    },
-    {
-      id: "lastExecutionStatus", label: t("job.columns.executionResult"), width: 200,
-      render: (value: string, row: Job) => {
-        const status = row.lastExecutionDisplayStatus ?? value;
-        const label = t(`job.executionStatus.${status}`, { defaultValue: getStatusLabel(JobStatus, status) });
-        return row.resultMessage
-          ? <Tooltip title={row.resultMessage}><span>{label}</span></Tooltip>
-          : <span>{label}</span>;
-      },
     },
     {
       id: "actions", label: t("job.columns.run"), width: 120, isActionColumn: true,

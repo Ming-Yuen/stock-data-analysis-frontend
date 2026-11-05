@@ -12,7 +12,6 @@ export interface DashboardResponse {
   }
   
   export interface SnapshotMeta {
-    updateTime: string;
     marketDate: string;
     sources: string[];
   }

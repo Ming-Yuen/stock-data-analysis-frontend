@@ -1,12 +1,10 @@
 export type MetricStatus = "AVAILABLE" | "STALE" | "INSUFFICIENT_DATA" | "UNVERIFIED" | "NOT_APPLICABLE";
 export type EligibilityStatus = "ALLOWED" | "DEGRADED" | "BLOCKED";
 export type AnalysisHorizon = "SWING" | "POSITION";
-export type PositionSelectionKind = "UNKNOWN" | "CURRENT" | "EXPLICIT_NONE";
 
 /** 分析頁面使用的請求欄位；未指定 analysisAsOf 時由後端決定分析時間。 */
 export interface AnalysisReportRequest {
   figi: string; horizon: AnalysisHorizon; analysisAsOf?: string | null;
-  positionSelection: { kind: PositionSelectionKind }; accountRisk: AccountRiskContext | null;
 }
 
 export interface AnalysisReason { code: string; component: string; message: string; params?: Record<string, unknown>; evidenceRefs?: string[]; }
@@ -97,17 +95,6 @@ export interface ConfluenceScenario {
   preferredPlanId?: string | null; strongBuyZone?: PriceRange | null; marketDecision?: "WAIT" | "BUY_CANDIDATE"; confidence?: string;
   evidenceScore?: number; coverage?: number; scenarios: Scenario[]; activeScenarioId?: string | null; reasons: AnalysisReason[];
 }
-export interface AccountRiskContext {
-  currency: "USD"; asOf: string; equity: number; availableCash: number; portfolioRiskAmount: number;
-  riskBudgetFraction: number; maxPortfolioRiskFraction: number; maxPositionWeightFraction: number; quantityStep: number;
-  complete: boolean; provenance: "USER_DECLARED";
-}
-
-export interface PositionDecision {
-  action: string; planId?: string | null; status: MetricStatus; positionVersion?: string | null; suggestedFraction?: number | null;
-  suggestedQuantity?: number | null; currentExposurePercent?: number | null; riskBudgetAmount?: number | null;
-  primaryReason: string; reasons: AnalysisReason[]; evidenceRefs: string[]; positionKnown: boolean;
-}
 export interface FutuValuationObservation {
   metric: string; status: MetricStatus; value: number | null; forwardValue?: number | null;
   observedAt: string; providerSymbol: string; industryCode: string; plateCode: string;
@@ -159,11 +146,10 @@ export interface StockAnalysisReport {
   context: AnalysisContext; eligibility: AnalysisEligibility; normalizedPrice: MetricResult<NormalizedPriceSeries>;
   priceStructure: MetricResult<PriceStructure>; supportResistance: MetricResult<SupportResistance>; valuation: MetricResult<HistoricalValuation>;
   marketContext: MetricResult<MarketContext>; tradePlans: MetricResult<TradePlanResult>; confluenceScenarios: MetricResult<ConfluenceScenario>;
-  positionDecision: MetricResult<PositionDecision>; snapshotId?: string | null; reasons: AnalysisReason[];
+  snapshotId?: string | null; reasons: AnalysisReason[];
   futuObservations?: FutuObservations | null;
 }
 
 export interface AnalysisApiError { code: string; fieldErrors: Record<string, string>; requestId: string; }
 export interface AnalysisApiResponse<T> { success: boolean; message: string; data: T | null; error: AnalysisApiError | null; }
 export interface AnalysisReportData { report: StockAnalysisReport; }
-export interface PositionDto { id: string; version: string; figi: string; quantity: number; averageCost?: number | null; currency: string; horizon: AnalysisHorizon; effectiveAt: string; basisRef: string; manualStop?: number | null; thesis?: string | null; status: string; closedAt?: string | null; }

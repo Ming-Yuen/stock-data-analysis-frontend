@@ -36,10 +36,6 @@ test("keeps the saved start date when editing an existing job", () => {
     cronExpression: "0 0 12 * * ?",
     startTime: "2026-10-26T00:00:00",
     activeStatus: ActiveStatus.ACTIVE,
-    lastExecutionStatus: "",
-    lastExecStartTime: "",
-    lastExecEndTime: "",
-    resultMessage: "",
   };
   const { container } = render(<JobCreatePage menuTree={menu} job={job} />);
 

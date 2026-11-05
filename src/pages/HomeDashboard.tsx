@@ -96,7 +96,7 @@ const HomeDashboard: React.FC = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Schedule sx={{ fontSize: 18, color: "text.secondary" }} />
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              {t("dashboard.updatedAt")}：{snapshotMeta.updateTime} ／ {t("dashboard.marketDate")}：{snapshotMeta.marketDate}
+              {t("dashboard.marketDate")}：{snapshotMeta.marketDate}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>

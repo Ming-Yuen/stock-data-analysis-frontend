@@ -1,10 +1,10 @@
 import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { StockAnalysisPage } from "./StockAnalysis";
 import resources from "../locales/zh-HK.json";
 
-jest.mock("@tanstack/react-query", () => ({ useQuery: jest.fn(), useMutation: jest.fn(), useQueryClient: jest.fn() }));
+jest.mock("@tanstack/react-query", () => ({ useQuery: jest.fn() }));
 jest.mock("react-router-dom", () => ({ useNavigate: () => jest.fn(), useParams: () => ({ figi: "AAPL-FIGI" }) }), { virtual: true });
 jest.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { resolvedLanguage: "en-GB" }, t: (key: string, options?: Record<string, unknown>) => {
   const strings = require("../locales/zh-HK.json");
@@ -29,12 +29,9 @@ beforeEach(() => {
     eligibility: { status: "DEGRADED", reasons: [], components: {}, fundamentalDataThrough: "2026-06-27" },
     normalizedPrice: unavailable("PRICE_MISSING"), priceStructure: unavailable("STRUCTURE_MISSING"), supportResistance: unavailable("LEVELS_MISSING"),
     valuation: available(valuation), marketContext: unavailable("MARKET_MISSING"), tradePlans: unavailable("PLAN_MISSING"),
-    confluenceScenarios: unavailable("CONFLUENCE_MISSING"), positionDecision: unavailable("POSITION_MISSING"),
+    confluenceScenarios: unavailable("CONFLUENCE_MISSING"),
   };
-  (useQuery as jest.Mock).mockImplementation(({ queryKey }) => queryKey[0] === "analysis-position"
-    ? { data: null, isFetched: true } : { data: { report }, isLoading: false });
-  (useMutation as jest.Mock).mockReturnValue({ mutate: jest.fn(), isPending: false });
-  (useQueryClient as jest.Mock).mockReturnValue({ setQueryData: jest.fn(), invalidateQueries: jest.fn() });
+  (useQuery as jest.Mock).mockReturnValue({ data: { report }, isLoading: false });
 });
 
 function range(kind: "historical" | "industry" | "peer") {
