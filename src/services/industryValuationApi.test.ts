@@ -1,27 +1,27 @@
 import { apiClient } from "./apiClient";
 import { industryValuationApi } from "./industryValuationApi";
-import { Job } from "./types/dto/batch";
-import { apiConfig } from "../apiConfig";
 
-jest.mock("./apiClient", () => ({ apiClient: { get: jest.fn(), post: jest.fn() } }));
-
-beforeEach(() => jest.clearAllMocks());
-
-test("uses the job returned by the backend and targets only the current FIGI", async () => {
-  (apiClient.post as jest.Mock).mockResolvedValue({ data: { success: true } });
-  await industryValuationApi.recalculate({ taskCode: "BACKEND_TASK", taskGroup: "SCHEDULE", jobParams: { figis: "OTHER", fullUniverse: true } } as unknown as Job, "CURRENT-FIGI");
-  expect(apiClient.post).toHaveBeenCalledWith(apiConfig.launchJobList.url, {
-    taskCode: "BACKEND_TASK", taskGroup: "SCHEDULE", jobParams: { figis: "CURRENT-FIGI" },
-  });
+jest.mock("./apiClient", () => ({ apiClient: { get: jest.fn(), post: jest.fn(), put: jest.fn() } }));
+beforeEach(() => {
+  jest.clearAllMocks();
+  (apiClient.get as jest.Mock).mockResolvedValue({ data: {} });
+  (apiClient.post as jest.Mock).mockResolvedValue({ data: {} });
+  (apiClient.put as jest.Mock).mockResolvedValue({ data: {} });
 });
 
-test("reads the direct proposal response and sends approval only to the explicitly selected proposal", async () => {
-  const review = { industryCode: "I43", availableActions: [] };
-  (apiClient.get as jest.Mock).mockResolvedValue({ data: review });
-  expect(await industryValuationApi.review("I43")).toBe(review);
-  expect(apiClient.post).not.toHaveBeenCalled();
-  const approval = { review, recalculationRequired: true, recalculationTaskCode: "BACKEND_TASK" };
-  (apiClient.post as jest.Mock).mockResolvedValue({ data: approval });
-  expect(await industryValuationApi.approve("I43", "draft-id")).toBe(approval);
-  expect(apiClient.post).toHaveBeenCalledWith("industry-valuation/I43/proposals/draft-id/approve");
+test("uses synchronous proposal response without proposal IDs or polling", async () => {
+  await industryValuationApi.propose("I43");
+  expect(apiClient.post).toHaveBeenCalledWith("industry-valuation/I43/proposals", undefined, { timeout: 0 });
+});
+
+test("saves only the explicitly confirmed config with concurrency baseline", async () => {
+  const input = { baseEffectiveAt: "2026-11-01T00:00:00Z", modelCode: "PE", primaryMetric: "PE",
+    assumedMultipleLow: 15, assumedMultipleHigh: 25, rationale: "人工確認", sourceUrl: null };
+  await industryValuationApi.save("I43", input);
+  expect(apiClient.put).toHaveBeenCalledWith("industry-valuation/I43/config", input);
+});
+
+test("recalculates one stock and one date without a watchlist or schedule parameter", async () => {
+  await industryValuationApi.recalculate("TEST-FIGI", "2026-11-05");
+  expect(apiClient.post).toHaveBeenCalledWith("valuation/recalculate", { figi: "TEST-FIGI", from: "2026-11-05", through: "2026-11-05" });
 });

@@ -2,422 +2,77 @@ import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useQuery } from "@tanstack/react-query";
 import { StockAnalysisPage } from "./StockAnalysis";
-import resources from "../locales/zh-HK.json";
+import { apiClient } from "../services/apiClient";
+import { SeriesChart } from "./ValuationPanels";
+import { formatNumber } from "./AnalysisPanels";
 
 jest.mock("@tanstack/react-query", () => ({ useQuery: jest.fn() }));
 jest.mock("react-router-dom", () => ({ useNavigate: () => jest.fn(), useParams: () => ({ figi: "AAPL-FIGI" }) }), { virtual: true });
-jest.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { resolvedLanguage: "en-GB" }, t: (key: string, options?: Record<string, unknown>) => {
-  const strings = require("../locales/zh-HK.json");
-  const value = key.split(".").reduce((node: any, part: string) => node?.[part], strings);
-  return typeof value === "string" ? value.replace(/{{(.*?)}}/g, (_: string, token: string) => String(options?.[token] ?? "")) : options?.defaultValue ?? key;
-} }) }));
+jest.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }) }));
 jest.mock("../services/apiClient", () => ({ apiClient: { get: jest.fn(), post: jest.fn(), put: jest.fn() } }));
 jest.mock("./IndustryValuationProposalPanel", () => ({ IndustryValuationProposalPanel: () => null }));
 
-const unavailable = (code: string, message = code) => ({ status: "INSUFFICIENT_DATA", value: null,
-  reasons: [{ code, component: "VALUATION", message }], evidenceRefs: [] });
-const available = (value: unknown) => ({ status: "AVAILABLE", value, reasons: [], evidenceRefs: [] });
-const fair = (modelCode: string, low: number, central: number, high: number) => available({ modelCode, low, central, high, status: "AVAILABLE" });
-let valuation: Record<string, any>;
-let report: Record<string, any>;
+const unavailable = (code: string) => ({ status: "INSUFFICIENT_DATA", value: null, reasons: [{ code, component: "TEST", message: code }] });
+const metric = (value: number | null) => ({ value, status: value == null ? "INSUFFICIENT_DATA" : "AVAILABLE", reasonCode: value == null ? "MISSING_INPUT" : null });
+const reference = (kind: string, low: number, high: number) => ({
+  kind, metricCode: "PE", status: "AVAILABLE", reasonCode: null, multipleLow: 10, multipleMedian: 15, multipleHigh: 20,
+  priceLow: low, priceHigh: high, sampleCount: 24,
+});
+let report: any;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  valuation = { fairValueRange: fair("PE", 100, 110, 120), industryFairValueRange: fair("EV_EBITDA", 200, 230, 260) };
   report = {
-    context: { figi: "AAPL-FIGI", analysisAsOf: "2026-10-30T20:00:00Z", horizon: "SWING" },
-    eligibility: { status: "DEGRADED", reasons: [], components: {}, fundamentalDataThrough: "2026-06-27" },
-    normalizedPrice: unavailable("PRICE_MISSING"), priceStructure: unavailable("STRUCTURE_MISSING"), supportResistance: unavailable("LEVELS_MISSING"),
-    valuation: available(valuation), marketContext: unavailable("MARKET_MISSING"), tradePlans: unavailable("PLAN_MISSING"),
-    confluenceScenarios: unavailable("CONFLUENCE_MISSING"),
+    figi: "AAPL-FIGI", symbol: "AAPL", name: "Apple", valuationDate: "2026-11-05",
+    valuation: { figi: "AAPL-FIGI", valuationDate: "2026-11-05", analysisAsOf: "2026-11-05T21:00:00Z", calculatedAt: "2026-11-06T00:00:00Z",
+      currency: "USD", price: 200, industryCode: "I43", modelCode: "PE", primaryMetric: "PE", status: "PARTIAL", reasonCode: "SOME_INPUTS_MISSING",
+      metrics: { pe: metric(25), pb: metric(null), ps: metric(7), pfcf: metric(null), evEbitda: metric(null) },
+      historicalReference: reference("HISTORICAL_MARKET", 100, 150), peerReference: reference("PEER_MARKET", 120, 160),
+      industryAssumption: reference("INDUSTRY_ASSUMPTION", 130, 170) },
+    financials: null, history: [], priceStructure: unavailable("NO_PRICE"), supportResistance: unavailable("NO_LEVELS"),
+    marketContext: unavailable("NO_MARKET"), tradePlans: unavailable("NO_PLAN"), futuObservations: null, reasons: [],
   };
-  (useQuery as jest.Mock).mockReturnValue({ data: { report }, isLoading: false });
+  (useQuery as jest.Mock).mockImplementation((options: any) => ({ data: options.queryKey[0] === "analysis-report" ? report : undefined,
+    isLoading: false, isFetching: false, isError: false, refetch: jest.fn() }));
 });
 
-function range(kind: "historical" | "industry" | "peer") {
-  return within(screen.getByRole("region", { name: resources.analysisReport[kind === "historical" ? "historicalFairValue" : kind === "peer" ? "peerReferenceValue" : "industryFairValue"] }));
-}
-
-test("explains when the market decision and confidence fail the market evidence cutoff", () => {
-  const message = "市場 evidence 在 analysisAsOf 後才公開。";
-  report.confluenceScenarios = {
-    ...unavailable("CONTEXT_FUTURE_MARKET_AVAILABILITY", message),
-    status: "UNVERIFIED",
-    reasons: [{ code: "CONTEXT_FUTURE_MARKET_AVAILABILITY", component: "CONFLUENCE", message }],
-  };
-
+test("reads the plain report API and sends only FIGI and optional valuation date", async () => {
   render(<StockAnalysisPage />);
-
-  const { marketDecision, confidence, states } = resources.analysisReport;
-  expect(within(screen.getByText(marketDecision).parentElement!).getByText(states.UNVERIFIED)).toBeTruthy();
-  expect(within(screen.getByText(confidence).parentElement!).getByText(states.UNVERIFIED)).toBeTruthy();
-  expect(screen.getByText((text) => text.includes(message))).toBeTruthy();
-  expect(screen.getByText("31 Oct 2026, 04:00").getAttribute("datetime")).toBe("2026-10-30T20:00:00Z");
+  const query = (useQuery as jest.Mock).mock.calls.find(([options]) => options.queryKey[0] === "analysis-report")![0];
+  (apiClient.post as jest.Mock).mockResolvedValue({ data: report });
+  expect(await query.queryFn()).toBe(report);
+  expect(apiClient.post).toHaveBeenCalledWith("analysis/report", { figi: "AAPL-FIGI" });
+  fireEvent.change(screen.getByLabelText("估值日期（留空為最新）"), { target: { value: "2026-10-30" } });
+  fireEvent.click(screen.getByRole("button", { name: "查詢" }));
+  const calls = (useQuery as jest.Mock).mock.calls.filter(([options]) => options.queryKey[0] === "analysis-report");
+  await calls[calls.length - 1][0].queryFn();
+  expect(apiClient.post).toHaveBeenLastCalledWith("analysis/report", { figi: "AAPL-FIGI", valuationDate: "2026-10-30" });
 });
 
-test("displays an untranslated backend status code", () => {
-  report.confluenceScenarios = available({ marketDecision: "NEW_MARKET_DECISION" });
-
+test("keeps actual historical and peer references separate from industry assumptions", () => {
   render(<StockAnalysisPage />);
-
-  expect(screen.getByText("NEW_MARKET_DECISION")).toBeTruthy();
-  expect(within(screen.getByText(resources.analysisReport.confidence).parentElement!)
-    .getByText(resources.analysisReport.stateUnknown)).toBeTruthy();
+  expect(within(screen.getByRole("region", { name: "歷史市場估值參考" })).getByText("100.00–150.00")).toBeTruthy();
+  expect(within(screen.getByRole("region", { name: "同業市場估值參考" })).getByText("120.00–160.00")).toBeTruthy();
+  expect(within(screen.getByRole("region", { name: "產業估值假設" })).getByText("130.00–170.00")).toBeTruthy();
+  expect(screen.getByText("25.00")).toBeTruthy();
+  expect(screen.queryByText("勝率")).toBeNull();
 });
 
-test("shows backend reasons when available confluence has no preferred plan", () => {
-  const message = "沒有可評估的技術計劃；不能為了輸出 BUY 製造價位。";
-  report.confluenceScenarios = available({ marketDecision: "WAIT", confidence: "UNAVAILABLE", preferredPlanId: null,
-    reasons: [{ code: "NO_EXECUTABLE_TECHNICAL_PLAN", component: "CONFLUENCE", message }] });
-
+test("does not display unavailable values or coerce missing values into zero", () => {
+  report.valuation.metrics.pe = { value: 99999, status: "INSUFFICIENT_DATA", reasonCode: "EPS_BASIS_MISSING" };
   render(<StockAnalysisPage />);
-
-  expect(screen.getByText(message)).toBeTruthy();
-  expect(within(screen.getByText(resources.analysisReport.marketDecision).parentElement!)
-    .getByText(resources.analysisReport.states.WAIT)).toBeTruthy();
-  expect(within(screen.getByText(resources.analysisReport.confidence).parentElement!)
-    .getByText(resources.analysisReport.states.UNAVAILABLE)).toBeTruthy();
-  expect(within(screen.getByRole("region", { name: resources.analysisReport.preferredTechnicalPlan }))
-    .getByText(resources.analysisReport.noPreferredPlan)).toBeTruthy();
+  expect(screen.queryByText("99,999.00")).toBeNull();
+  expect(screen.getByText(/EPS_BASIS_MISSING/)).toBeTruthy();
+  expect(formatNumber(null)).toBe("—");
+  expect(formatNumber(undefined)).toBe("—");
+  expect(formatNumber(0)).toBe("0.00");
 });
 
-test("shows outer and available-value trade plan reasons without repeating the same explanation", () => {
-  const outer = { code: "PLAN_SOURCE_LIMIT", component: "TRADE_PLAN", message: "來源限制仍然適用。" };
-  const inner = { code: "PLAN_INPUT_UNAVAILABLE", component: "TRADE_PLAN", message: "支撐實際強度 12，最低需要 30。" };
-  report.tradePlans = { ...available({ plans: [], currentPrice: 100, reasons: [outer, inner] }), reasons: [outer] };
-
-  render(<StockAnalysisPage />);
-
-  expect(screen.getAllByText(outer.message)).toHaveLength(1);
-  expect(screen.getByText(inner.message)).toBeTruthy();
-});
-
-test("keeps unavailable payload reasons and prices hidden while showing outer trade plan reasons", () => {
-  report.confluenceScenarios = { ...unavailable("CONFLUENCE_UNVERIFIED"), status: "UNVERIFIED",
-    value: { preferredPlanId: "old-plan", reasons: [{ code: "OLD_CONFLUENCE", component: "CONFLUENCE", message: "舊決策原因" }] } };
-  report.tradePlans = { ...unavailable("PLAN_SOURCE_STALE", "技術計劃來源已過期。"), status: "STALE",
-    value: { plans: [{ planId: "old-plan", entryRange: { lower: 90, upper: 95 } }],
-      reasons: [{ code: "OLD_PLAN", component: "TRADE_PLAN", message: "舊計劃原因" }] } };
-
-  render(<StockAnalysisPage />);
-
-  expect(screen.getByText("技術計劃來源已過期。")).toBeTruthy();
-  expect(screen.queryByText("舊決策原因")).toBeNull();
-  expect(screen.queryByText("舊計劃原因")).toBeNull();
-  expect(screen.queryByText("90.00 – 95.00")).toBeNull();
-});
-
-test("shows placeholders for empty support and resistance lists", () => {
-  report.supportResistance = available({ supports: [], resistances: [], containingZones: [], reasons: [] });
-
-  render(<StockAnalysisPage />);
-
-  expect(within(screen.getByText(resources.analysisReport.levels).parentElement!).getAllByText("—")).toHaveLength(2);
-});
-
-const futuValuationRow = (metric: string, value: number | null, status = "AVAILABLE") => ({
-  metric, value, status, providerSymbol: "US.AAPL", industryCode: "I0001", plateCode: "US.LIST001",
-  observedAt: "2026-10-30T20:10:00Z",
-});
-
-test("shows Futu observations separately when the internal valuation is unavailable", () => {
-  report.valuation = unavailable("VALUATION_SNAPSHOT_REQUIRED");
-  report.futuObservations = {
-    valuations: available([futuValuationRow("NEW_METRIC", 31.5), futuValuationRow("PB", null, "INSUFFICIENT_DATA")]),
-    earnings: available([
-      { metric: "EPS", status: "AVAILABLE", value: -1.25, currency: "USD", fiscalPeriod: "2026 Q4", periodType: "QUARTERLY",
-        publishType: "AFTER_MARKET", earningsDate: "2026-11-05", observedAt: "2026-10-30T20:10:00Z", providerSymbol: "US.AAPL" },
-    ]),
-  };
-
-  render(<StockAnalysisPage />);
-
-  const valuations = within(screen.getByRole("table", { name: resources.analysisReport.futu.valuation.title }));
-  expect(valuations.getByText("NEW_METRIC")).toBeTruthy();
-  expect(valuations.getByText("31.5×")).toBeTruthy();
-  expect(valuations.getByText("P/B")).toBeTruthy();
-  expect(valuations.getByText(resources.analysisReport.states.INSUFFICIENT_DATA)).toBeTruthy();
-  expect(valuations.getAllByText("31 Oct 2026, 04:10")).toHaveLength(2);
-  expect(valuations.queryByText("P/E")).toBeNull();
-  const earnings = within(screen.getByRole("table", { name: resources.analysisReport.futu.earnings.title }));
-  expect(earnings.getByText("-1.25 USD")).toBeTruthy();
-  expect(earnings.getByText("2026 Q4")).toBeTruthy();
-  expect(earnings.getByText(resources.analysisReport.futu.periodTypes.QUARTERLY)).toBeTruthy();
-  expect(earnings.getByText("31 Oct 2026, 04:10").getAttribute("datetime")).toBe("2026-10-30T20:10:00Z");
-  expect(earnings.getByText("2026-11-05").getAttribute("datetime")).toBe("2026-11-05");
-  expect(range("historical").getByText(resources.analysisReport.reasons.VALUATION_SNAPSHOT_REQUIRED)).toBeTruthy();
-});
-
-test("labels older Futu valuations separately and explains an expired earnings window", () => {
-  report.futuObservations = {
-    valuations: {
-      ...unavailable("FUTU_SYNC_FAILED"), status: "STALE",
-      lastKnown: [futuValuationRow("PE", 31.5)],
-    },
-    earnings: { ...unavailable("FUTU_WINDOW_EXPIRED"), status: "STALE" },
-  };
-
-  render(<StockAnalysisPage />);
-
-  const { valuation, earnings, lastKnown } = resources.analysisReport.futu;
-  expect(screen.queryByRole("table", { name: valuation.title })).toBeNull();
-  expect(within(screen.getByRole("table", { name: `${valuation.title} · ${lastKnown}` })).getByText("31.5×")).toBeTruthy();
-  expect(screen.getByText(resources.analysisReport.reasons.FUTU_SYNC_FAILED)).toBeTruthy();
-  expect(screen.queryByRole("table", { name: earnings.title })).toBeNull();
-  expect(screen.getByText(resources.analysisReport.reasons.FUTU_WINDOW_EXPIRED)).toBeTruthy();
-  expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
-});
-
-test("shows Futu historical multiples and Morningstar fair value independently of the internal valuation", () => {
-  report.valuation = unavailable("VALUATION_SNAPSHOT_REQUIRED");
-  report.futuObservations = {
-    valuations: available([]),
-    earnings: available([]),
-    valuationDetail: available({
-      providerSymbol: "US.AAPL", metric: "PE", currentValue: 37.017, forwardValue: 35.679,
-      averageValue: 31.409, avgMinus1Stddev: 26.519, avgPlus1Stddev: 36.299, valuationPercentile: 85.55,
-      q25: 28.0815, median: 31.761, q75: 35.234, historicalMonths: 60,
-      historyFrom: "2021-11-30", historyThrough: "2026-10-30",
-      sourceUpdatedAt: "2026-10-30T20:00:00Z", observedAt: "2026-10-30T20:10:00Z",
-      plateName: "Consumer Electronics", plateRank: 3, plateRankCount: 3,
-      peers: [{ symbol: "AAPL", value: 37.017 }, { symbol: "SONO", value: 35.444 }],
-    }),
-    morningstar: available({
-      providerSymbol: "US.AAPL", sourceUpdatedAt: "2026-10-28T20:00:00Z", observedAt: "2026-10-30T20:10:00Z",
-      fairValue: 290, starRating: 2, ratingType: "QUALITATIVE", uncertainty: "Medium",
-    }),
-  };
-
-  render(<StockAnalysisPage />);
-
-  const { valuationDetail, morningstar, uncertaintyLevels } = resources.analysisReport.futu;
-  const history = within(screen.getByRole("region", { name: valuationDetail.title }));
-  expect(history.getByText("28.0815×")).toBeTruthy();
-  expect(history.getByText("36.299×")).toBeTruthy();
-  expect(history.getByText("85.55%")).toBeTruthy();
-  expect(history.getByText("第 3 位／3")).toBeTruthy();
-  expect(history.getByText("2026-10-30").getAttribute("datetime")).toBe("2026-10-30");
-  expect(history.getByText("31 Oct 2026, 04:00").getAttribute("datetime")).toBe("2026-10-30T20:00:00Z");
-  expect(history.getByText("31 Oct 2026, 04:10").getAttribute("datetime")).toBe("2026-10-30T20:10:00Z");
-  expect(within(history.getByRole("table", { name: valuationDetail.peers })).getByText("SONO")).toBeTruthy();
-  const research = within(screen.getByRole("region", { name: morningstar.title }));
-  expect(research.getByText("290")).toBeTruthy();
-  expect(research.getByText(uncertaintyLevels.Medium)).toBeTruthy();
-  expect(range("historical").getByText(resources.analysisReport.reasons.VALUATION_SNAPSHOT_REQUIRED)).toBeTruthy();
-});
-
-test("labels a previous Morningstar observation when the current source time is unverified", () => {
-  report.futuObservations = {
-    valuations: available([]),
-    earnings: available([]),
-    valuationDetail: unavailable("FUTU_NOT_SYNCED"),
-    morningstar: {
-      ...unavailable("FUTU_SOURCE_TIME_UNVERIFIED"),
-      status: "UNVERIFIED",
-      value: { providerSymbol: "US.AAPL", fairValue: 300, observedAt: "2026-10-30T20:10:00Z" },
-      lastKnown: { providerSymbol: "US.AAPL", fairValue: 290, observedAt: "2026-10-28T20:10:00Z" },
-    },
-  };
-
-  render(<StockAnalysisPage />);
-
-  const { valuationDetail, morningstar, lastKnown } = resources.analysisReport.futu;
-  const research = within(screen.getByRole("region", { name: morningstar.title }));
-  expect(research.getByText(resources.analysisReport.reasons.FUTU_SOURCE_TIME_UNVERIFIED)).toBeTruthy();
-  expect(research.getByText(lastKnown)).toBeTruthy();
-  expect(research.getByText("290")).toBeTruthy();
-  expect(research.queryByText("300")).toBeNull();
-  expect(within(screen.getByRole("region", { name: valuationDetail.title }))
-    .getByText(resources.analysisReport.reasons.FUTU_NOT_SYNCED)).toBeTruthy();
-});
-
-test.each(["VALUATION_SNAPSHOT_REQUIRED", "VALUATION_SNAPSHOT_INPUT_MISMATCH", "VALUATION_SNAPSHOT_NOT_YET_AVAILABLE"] as const)(
-  "shows saved-valuation failure %s without reusing prices from another result", (code) => {
-    report.valuation = {
-      status: code === "VALUATION_SNAPSHOT_REQUIRED" ? "INSUFFICIENT_DATA" : "UNVERIFIED",
-      value: valuation, reasons: [{ code, component: "VALUATION", message: code }], evidenceRefs: [],
-    };
-    render(<StockAnalysisPage />);
-    for (const kind of ["historical", "peer", "industry"] as const) {
-      expect(range(kind).getByText(resources.analysisReport.reasons[code])).toBeTruthy();
-      expect(range(kind).queryByText(/100.00 – 120.00 USD|200.00 – 260.00 USD/)).toBeNull();
-      expect(range(kind).queryByText(/買入觀察：低於/)).toBeNull();
-    }
-  });
-
-test("keeps peer reference prices, same-date statistics and sample counts distinct from history and AI assumptions", () => {
-  valuation.industryMarketReference = {
-    industryCode: "HARDWARE", industry: "Computer hardware", primaryValuationMetric: "PE", status: "AVAILABLE", marketAsOf: "2026-10-30",
-    metrics: { PE: { q25: 25, median: 28, q75: 30, companyCount: 3, sampleCount: 4, status: "AVAILABLE" },
-      PB: { q25: null, median: null, q75: null, companyCount: 2, sampleCount: 2, status: "INSUFFICIENT_DATA" } },
-    priceRange: fair("PE", 125, 140, 150),
-  };
-  valuation.industryMarketReference.priceRange.value.observation = { position: "ABOVE_RANGE", currentPrice: 160, buyBelow: 125, sellAbove: 150 };
-  valuation.industryMarketReference.priceRange.value.multipleQuantiles = { q25: 25, q50: 28, q75: 30 };
-  render(<StockAnalysisPage />);
-  expect(range("peer").getByText(/Computer hardware/)).toBeTruthy();
-  expect(range("peer").getByText("125.00 – 150.00 USD")).toBeTruthy();
-  expect(range("peer").getByText(/有效樣本：3 家公司／4 個股類觀測/)).toBeTruthy();
-  expect(range("peer").getByText(/市場比較日期: 2026-10-30/)).toBeTruthy();
-  expect(range("peer").getByText(resources.analysisReport.observations.ABOVE_RANGE)).toBeTruthy();
-  expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
-  expect(range("industry").getByText("200.00 – 260.00 USD")).toBeTruthy();
-  const rows = within(screen.getByRole("table", { name: resources.analysisReport.peerStatistics }));
-  expect(rows.getByText("25.00×")).toBeTruthy();
-  expect(rows.getByText("28.00×")).toBeTruthy();
-  expect(rows.getByText("30.00×")).toBeTruthy();
-  expect(rows.getByText("P/B")).toBeTruthy();
-  fireEvent.click(range("peer").getByRole("button", { name: resources.analysisReport.calculationEvidence }));
-  expect(range("peer").getByText(/同業中位數: 28.00×/)).toBeTruthy();
-  expect(range("peer").queryByText(/歷史中位數/)).toBeNull();
-});
-
-test("shows insufficient company samples without creating peer prices or displaying unpublished multiples", () => {
-  valuation.industryMarketReference = {
-    industryCode: "HARDWARE", industry: "Computer hardware", primaryValuationMetric: "PE", status: "INSUFFICIENT_DATA", marketAsOf: "2026-10-30",
-    metrics: { PE: { q25: 25, median: 28, q75: 30, companyCount: 2, sampleCount: 3, status: "INSUFFICIENT_DATA" } },
-    priceRange: unavailable("PEER_SAMPLE_INSUFFICIENT", "有效公司數不足三家"),
-  };
-  render(<StockAnalysisPage />);
-  expect(range("peer").getByText("有效公司數不足三家")).toBeTruthy();
-  expect(range("peer").getByText(/有效樣本：2 家公司／3 個股類觀測/)).toBeTruthy();
-  expect(range("peer").queryByText(/買入觀察：低於/)).toBeNull();
-  expect(within(screen.getByRole("table", { name: resources.analysisReport.peerStatistics })).queryByText("28.00×")).toBeNull();
-  expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
-});
-
-test("does not turn stale peer prices into a current observation", () => {
-  const stale = fair("PE", 125, 140, 150);
-  stale.status = "STALE";
-  valuation.industryMarketReference = { industryCode: "HARDWARE", industry: "Computer hardware", primaryValuationMetric: "PE", status: "STALE", marketAsOf: "2026-10-29", priceRange: stale };
-  render(<StockAnalysisPage />);
-  expect(range("peer").getByText(/資料已過期/)).toBeTruthy();
-  expect(range("peer").queryByText("125.00 – 150.00 USD")).toBeNull();
-  expect(range("peer").queryByText(/買入觀察：低於/)).toBeNull();
-});
-
-test("keeps both valuation methods independent with different central rules", () => {
-  render(<StockAnalysisPage />);
-  expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
-  expect(range("historical").getByText("110.00")).toBeTruthy();
-  expect(range("industry").getByText("200.00 – 260.00 USD")).toBeTruthy();
-  expect(range("industry").getByText("230.00")).toBeTruthy();
-  expect(range("industry").getByText(/區間中點/)).toBeTruthy();
-  expect(range("industry").queryByText("110.00")).toBeNull();
-});
-
-test.each(["historical", "industry"] as const)("keeps both sections when only %s is available", (kind) => {
-  if (kind === "historical") valuation.industryFairValueRange = unavailable("INDUSTRY_FAIR_RANGE_MISSING");
-  else valuation.fairValueRange = unavailable("HISTORICAL_SAMPLE_MISSING", "歷史樣本尚不足");
-  render(<StockAnalysisPage />);
-  expect(range(kind).getByText(kind === "historical" ? "100.00 – 120.00 USD" : "200.00 – 260.00 USD")).toBeTruthy();
-  const missing = range(kind === "historical" ? "industry" : "historical");
-  expect(missing.getByText(/資料不足/)).toBeTruthy();
-  expect(missing.getByText(kind === "historical" ? /尚未建立產業合理估值倍數/ : /歷史樣本尚不足/)).toBeTruthy();
-});
-
-test("legacy responses do not calculate observation zones in the browser", () => {
-  delete valuation.industryFairValueRange;
-  render(<StockAnalysisPage />);
-  expect(range("historical").getByText("100.00 – 120.00 USD")).toBeTruthy();
-  expect(range("historical").getByText(resources.analysisReport.observationUnavailable)).toBeTruthy();
-  expect(range("industry").getByText(/資料不足/)).toBeTruthy();
-  expect(range("peer").getByText(/資料不足/)).toBeTruthy();
-  expect(range("peer").queryByText(/買入觀察：低於/)).toBeNull();
-  expect(range("historical").queryByText(/買入觀察：低於/)).toBeNull();
-});
-
-test("uses each backend observation without creating a buy decision", () => {
-  valuation.fairValueRange.value.observation = { position: "BELOW_RANGE", currentPrice: 99, buyBelow: 100, sellAbove: 120 };
-  valuation.industryFairValueRange.value.observation = { position: "WITHIN_RANGE", currentPrice: 230, buyBelow: 200, sellAbove: 260 };
-  render(<StockAnalysisPage />);
-  expect(range("historical").getByText(resources.analysisReport.observations.BELOW_RANGE)).toBeTruthy();
-  expect(range("industry").getByText(resources.analysisReport.observations.WITHIN_RANGE)).toBeTruthy();
-  expect(range("historical").getByText(/本次使用股價: 99.00/)).toBeTruthy();
-  expect(screen.getByText(resources.analysisReport.noPreferredPlan)).toBeTruthy();
-});
-
-test("reveals verified inputs and safe source links and financial dates", () => {
-  Object.assign(valuation.fairValueRange.value, { denominatorValue: 5, multipleQuantiles: { q25: 20, q50: 22, q75: 24 }, assumptions: { sourceUrls: "https://www.sec.gov/example\njavascript:alert(1)", classificationAsOf: "2026-10-30" } });
-  render(<StockAnalysisPage />);
-  fireEvent.click(range("historical").getByRole("button", { name: resources.analysisReport.calculationEvidence }));
-  expect(range("historical").getByText(/財務分母: 5.00/)).toBeTruthy();
-  expect(range("historical").getByText(/歷史中位數: 22.00×/)).toBeTruthy();
-  expect(range("historical").getByRole("link", { name: /www.sec.gov/ }).getAttribute("href")).toBe("https://www.sec.gov/example");
-  expect(range("historical").queryByRole("link", { name: /javascript/ })).toBeNull();
-  expect(screen.getByText(/財務期間截至: 2026-06-27/)).toBeTruthy();
-});
-
-test.each([
-  { name: "legacy key", assumptions: { classificationCode: "I_OLD" }, expected: "I_OLD" },
-  { name: "current key", assumptions: { industryCode: "I_NEW" }, expected: "I_NEW" },
-  { name: "current key takes precedence", assumptions: { industryCode: "I_NEW", classificationCode: "I_OLD" }, expected: "I_NEW" },
-])("reads industry code from saved assumptions: $name", ({ assumptions, expected }) => {
-  valuation.industryFairValueRange.value.assumptions = assumptions;
-  render(<StockAnalysisPage />);
-  fireEvent.click(range("industry").getByRole("button", { name: resources.analysisReport.calculationEvidence }));
-  expect(range("industry").getByText(`${resources.analysisReport.industryCode}: ${expected}`)).toBeTruthy();
-  if (expected === "I_NEW") expect(range("industry").queryByText(`${resources.analysisReport.industryCode}: I_OLD`)).toBeNull();
-});
-
-test("does not promote stale ranges or unselected plans into recommendations", () => {
-  valuation.fairValueRange.status = "STALE";
-  valuation.fairValueRange.value.observation = { position: "BELOW_RANGE", currentPrice: 99, buyBelow: 100, sellAbove: 120 };
-  report.tradePlans = available({ plans: [{ planId: "not-selected", entryRange: { lower: 90, upper: 95 } }], currentPrice: 100, priceDataThrough: "2026-10-30" });
-  render(<StockAnalysisPage />);
-  expect(range("historical").getByText(/資料已過期/)).toBeTruthy();
-  expect(range("historical").queryByText(/買入觀察區/)).toBeNull();
-  expect(screen.getByText(resources.analysisReport.noPreferredPlan)).toBeTruthy();
-  expect(within(screen.getByRole("region", { name: resources.analysisReport.preferredTechnicalPlan })).queryByText("90.00 – 95.00")).toBeNull();
-});
-
-test("only shows unselected plans as observation details and does not duplicate the preferred plan", () => {
-  const plan = (planId: string, lower: number, upper: number) => ({ planId, entryRange: { lower, upper }, status: "WAITING_TRIGGER", targets: [], reasons: [], riskReward: unavailable("RR_REQUIRED") });
-  report.tradePlans = available({ plans: [plan("chosen", 100, 105), plan("watch-only", 90, 95)], currentPrice: 110, priceDataThrough: "2026-10-30" });
-  report.confluenceScenarios = available({ preferredPlanId: "chosen", marketDecision: "WAIT" });
-  render(<StockAnalysisPage />);
-  const preferred = within(screen.getByRole("region", { name: resources.analysisReport.preferredTechnicalPlan }));
-  expect(preferred.getByText("100.00 – 105.00")).toBeTruthy();
-  expect(preferred.queryByText("90.00 – 95.00")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: resources.analysisReport.otherObservationPlans }));
-  const observations = within(screen.getByRole("region", { name: resources.analysisReport.otherObservationPlans }));
-  expect(observations.getByText("90.00 – 95.00")).toBeTruthy();
-  expect(observations.queryByText("100.00 – 105.00")).toBeNull();
-  expect(observations.getByText(resources.analysisReport.observationPlansLimit)).toBeTruthy();
-});
-
-test("shows backend close confirmation rules for preferred and observation plans without inventing legacy rules", () => {
-  const plan = (planId: string, stop: Record<string, unknown>) => ({ planId, stop, status: "WAITING_TRIGGER", targets: [], reasons: [], riskReward: unavailable("RR_REQUIRED") });
-  report.tradePlans = available({ plans: [
-    plan("chosen", { protectivePrice: 88, closeThreshold: 90, requiredCloses: 3, evaluationTimeframe: "WEEKLY" }),
-    plan("watch-only", { protectivePrice: 78, closeThreshold: 80, requiredCloses: 4, evaluationTimeframe: "DAILY" }),
-    plan("legacy", { protectivePrice: 68, closeThreshold: 70 }),
-  ], currentPrice: 110, priceDataThrough: "2026-10-30" });
-  report.confluenceScenarios = available({ preferredPlanId: "chosen", marketDecision: "WAIT" });
-  render(<StockAnalysisPage />);
-  expect(within(screen.getByRole("region", { name: resources.analysisReport.preferredTechnicalPlan })).getByText("連續 3 個完整週線收市低於此價才確認技術失效。")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: resources.analysisReport.otherObservationPlans }));
-  const observations = within(screen.getByRole("region", { name: resources.analysisReport.otherObservationPlans }));
-  expect(observations.getByText("連續 4 個完整日線收市低於此價才確認技術失效。")).toBeTruthy();
-  expect(observations.getByText("80.00")).toBeTruthy();
-  expect(observations.getByText("70.00")).toBeTruthy();
-  expect(observations.getAllByText(/才確認技術失效/)).toHaveLength(1);
-});
-
-test("shows backend technical descriptions without inferring a crossover", () => {
-  report.marketContext = available({ momentum: {}, momentumDetail: { indicators: { MACD: available(2.1), RSI14: unavailable("RSI_WARMUP_REQUIRED") },
-    interpretations: { MACD: { code: "MACD_ABOVE_SIGNAL", status: "AVAILABLE", params: { unit: "PRICE", timeframe: "DAILY" }, reasons: [] } } }, market: unavailable("MARKET_UNKNOWN") });
-  render(<StockAnalysisPage />);
-  expect(screen.getByText(resources.analysisReport.interpretations.MACD_ABOVE_SIGNAL)).toBeTruthy();
-  expect(screen.getByText(resources.analysisReport.reasons.RSI_WARMUP_REQUIRED)).toBeTruthy();
-  expect(screen.getByText(resources.analysisReport.scoreLimit)).toBeTruthy();
-});
-
-test("uses backend messages for unknown reasons and keeps market comparison separate", () => {
-  valuation.industryFairValueRange = unavailable("NEW_UPSTREAM_REASON", "來源正在重新核驗");
-  valuation.industryMarketReference = { industryCode: "TEST", industry: "Test industry", primaryValuationMetric: "PE", status: "AVAILABLE", marketAsOf: "2026-10-30", peMedian: 22, metrics: {} };
-  render(<StockAnalysisPage />);
-  expect(range("industry").getByText("來源正在重新核驗")).toBeTruthy();
-  expect(screen.getByText("P/E: 22.00×")).toBeTruthy();
-  expect(range("industry").queryByText("22.00")).toBeNull();
+test("history chart leaves gaps rather than inventing observations", () => {
+  render(<SeriesChart title="測試歷史" points={[
+    { date: "2026-01-01", value: 10 }, { date: "2026-02-01", value: null }, { date: "2026-03-01", value: 20 },
+  ]} />);
+  const path = screen.getByRole("img", { name: "測試歷史" }).querySelector("path")!.getAttribute("d")!;
+  expect(path.split("M").length - 1).toBe(2);
+  expect(path.includes("L")).toBe(false);
 });

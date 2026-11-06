@@ -1,193 +1,160 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Alert, Box, Button, Chip, CircularProgress, Grid, Link, Paper, Stack, Typography } from "@mui/material";
+import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { Alert, Box, Button, CircularProgress, FormControl, Grid, InputLabel, Link, MenuItem, Paper, Select, Stack, TextField, Typography } from "@mui/material";
 import { industryValuationApi } from "../services/industryValuationApi";
-import { IndustryValuationApproval, IndustryValuationProposal, IndustryValuationReview } from "../services/types/dto/industryValuation";
+import { IndustryValuationDraft, IndustryValuationReview } from "../services/types/dto/industryValuation";
 import { StockAnalysisReport } from "../services/types/dto/analysis";
 import { formatHongKongDateTime } from "../utils/hongKongTime";
+import { formatNumber, metricLabel } from "./AnalysisPanels";
 
 interface Props {
   industryCode?: string | null;
   figi: string;
+  valuationDate?: string | null;
   reloadReport: () => Promise<StockAnalysisReport | null>;
 }
-interface Recalculation {
-  approval: IndustryValuationApproval;
-  phase: "QUEUED" | "CONFIRMED" | "UNCONFIRMED" | "FAILED";
+interface DraftForm {
+  baseEffectiveAt: string | null;
+  modelCode: string;
+  primaryMetric: string;
+  low: string;
+  high: string;
+  rationale: string;
+  sourceUrl: string;
 }
 const errorMessage = (error: unknown) => {
   const value = error as { response?: { data?: { message?: string } }; message?: string };
-  return value.response?.data?.message || value.message || String(error);
+  return value.response?.data?.message || value.message || "操作失敗。";
 };
 const safeUrl = (value: string) => {
   try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password; }
   catch { return false; }
 };
-const formatRange = (low?: number | null, high?: number | null) =>
-  low == null || high == null ? "—" : `${low.toLocaleString()} – ${high.toLocaleString()} ×`;
 
-/** 只根據本股目前估值報告的正式假設確認核准結果，不依賴 Job 執行歷史。 */
-export function reportMatchesProposal(report: StockAnalysisReport | null, figi: string, code: string, proposal: IndustryValuationProposal): boolean {
-  if (report?.context.figi !== figi || report.valuation.status !== "AVAILABLE") return false;
-  const result = report.valuation.value?.industryFairValueRange;
-  if (result?.status !== "AVAILABLE" || !result.value) return false;
-  const value = result.value;
-  const assumptions = value.assumptions ?? {};
-  const sources = typeof assumptions.sourceUrls === "string" ? assumptions.sourceUrls.split(/\s+/).filter(Boolean).sort() : [];
-  return value.modelCode === proposal.metric && assumptions.rangeSource === "AI_INDUSTRY_BASELINE"
-    && assumptions.industryCode === code && assumptions.primaryValuationMetric === proposal.metric
-    && assumptions.classificationAsOf === proposal.asOf
-    && value.multipleQuantiles?.low === proposal.low && value.multipleQuantiles?.high === proposal.high
-    && JSON.stringify(sources) === JSON.stringify([...proposal.sourceUrls].sort());
-}
-
-export function IndustryValuationProposalPanel({ industryCode, figi, reloadReport }: Props) {
-  const { t, i18n } = useTranslation();
+export function IndustryValuationProposalPanel({ industryCode, figi, valuationDate, reloadReport }: Props) {
   const client = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [recalculation, setRecalculation] = useState<Recalculation | null>(null);
-  const commandPending = useRef(false);
-  const reload = useRef(reloadReport);
-  reload.current = reloadReport;
   const queryKey = ["industry-valuation-review", industryCode];
   const reviewQuery = useQuery<IndustryValuationReview>({
     queryKey, enabled: Boolean(industryCode),
     queryFn: () => industryValuationApi.review(industryCode!),
-    refetchInterval: (query) => ["PENDING", "PROCESSING"].includes(query.state.data?.latestProposal?.status ?? "") ? 2500 : false,
   });
   const review = reviewQuery.data;
-  const proposal = review?.latestProposal;
-  const pendingRecalculation = recalculation?.phase === "QUEUED";
+  const [form, setForm] = useState<DraftForm | null>(null);
+  const [draft, setDraft] = useState<IndustryValuationDraft | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!pendingRecalculation || !recalculation) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const poll = async () => {
-      try {
-        const report = await reload.current();
-        if (cancelled) return;
-        const approved = recalculation.approval.review.latestProposal;
-        if (approved && reportMatchesProposal(report, figi, industryCode!, approved)) {
-          setRecalculation({ ...recalculation, phase: "CONFIRMED" });
-          return;
-        }
-        // 未匹配代表目前數據尚未確認，不能由排程狀態推斷成功或失敗。
-        timer = setTimeout(poll, 3000);
-      } catch (failure) {
-        if (!cancelled) { setError(errorMessage(failure)); setRecalculation({ ...recalculation, phase: "FAILED" }); }
-      }
-    };
-    timer = setTimeout(poll, 3000);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [recalculation, pendingRecalculation, figi, industryCode]);
-
-  const act = async (action: "PROPOSE" | "APPROVE") => {
-    if (commandPending.current || !industryCode || !review?.availableActions.includes(action)) return;
-    if (action === "APPROVE" && proposal?.status !== "DRAFT") return;
-    commandPending.current = true;
-    setBusy(true);
-    setError(null);
-    let savedApproval: IndustryValuationApproval | null = null;
+  const propose = async () => {
+    if (!industryCode || !review?.canPropose || busy) return;
+    const baseEffectiveAt = review.current?.effectiveAt ?? null;
+    setBusy("PROPOSE"); setError(null); setMessage(null);
     try {
-      if (action === "PROPOSE") {
-        client.setQueryData(queryKey, await industryValuationApi.propose(industryCode));
-        setRecalculation(null);
-      } else {
-        const approval = await industryValuationApi.approve(industryCode, proposal!.id);
-        savedApproval = approval;
-        client.setQueryData(queryKey, approval.review);
-        if (approval.recalculationRequired) {
-          const job = approval.recalculationTaskCode ? await industryValuationApi.job(approval.recalculationTaskCode) : null;
-          if (!job) throw new Error(t("industryProposal.jobUnavailable"));
-          // 正常 Quartz API 接收一次性 trigger 並排隊；工作提交不依賴頁面繼續掛載。
-          await industryValuationApi.recalculate(job, figi);
-          setRecalculation({ approval, phase: "QUEUED" });
-        }
-      }
-    } catch (failure) {
-      setError(errorMessage(failure));
-      if (savedApproval) setRecalculation({ approval: savedApproval, phase: "FAILED" });
-      void reviewQuery.refetch();
-    } finally { commandPending.current = false; setBusy(false); }
-  };
-
-  const sources = (urls: string[]) => <Stack spacing={0.5}>{urls.map((url, index) => safeUrl(url)
-    ? <Link key={`${index}:${url}`} href={url} target="_blank" rel="noopener noreferrer" sx={{ overflowWrap: "anywhere" }}>{url}</Link>
-    : <Typography key={`${index}:${url}`} variant="body2" sx={{ overflowWrap: "anywhere" }}>{url}</Typography>)}</Stack>;
-  const refresh = async () => {
-    if (commandPending.current) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await reviewQuery.refetch();
-      const approved = recalculation?.approval.review.latestProposal;
-      if (recalculation && approved) {
-        const report = await reload.current();
-        const matched = reportMatchesProposal(report, figi, industryCode!, approved);
-        setRecalculation({ ...recalculation, phase: matched ? "CONFIRMED" : "UNCONFIRMED" });
-        if (!matched) setError(t("industryProposal.reportMismatch"));
-      }
+      const result = await industryValuationApi.propose(industryCode);
+      setDraft(result);
+      setForm({ baseEffectiveAt, modelCode: result.modelCode, primaryMetric: result.primaryMetric,
+        low: result.assumedMultipleLow?.toString() ?? "", high: result.assumedMultipleHigh?.toString() ?? "",
+        rationale: result.rationale ?? "", sourceUrl: result.sources[0]?.url ?? "" });
     } catch (failure) { setError(errorMessage(failure)); }
-    finally { setBusy(false); }
+    finally { setBusy(null); }
   };
-  const status = recalculation ? t(`industryProposal.recalculation.${recalculation.phase}`) : null;
-  const codeText = (code?: string | null) => code ? t(`industryProposal.codes.${code}`, { defaultValue: code }) : "—";
+  const edit = () => {
+    if (!review) return;
+    setDraft(null); setError(null); setMessage(null);
+    setForm({ baseEffectiveAt: review.current?.effectiveAt ?? null, modelCode: review.current?.modelCode ?? "",
+      primaryMetric: review.current?.primaryMetric ?? "", low: review.current?.assumedMultipleLow?.toString() ?? "",
+      high: review.current?.assumedMultipleHigh?.toString() ?? "", rationale: review.current?.rationale ?? "", sourceUrl: review.current?.sourceUrl ?? "" });
+  };
+  const save = async () => {
+    if (!industryCode || !review || !form || busy) return;
+    const low = form.low.trim() ? Number(form.low) : null, high = form.high.trim() ? Number(form.high) : null;
+    if (!review.supportedMetrics[form.modelCode]?.includes(form.primaryMetric)) {
+      setError("請選擇後端支援的模型及指標。"); return;
+    }
+    if ((low === null) !== (high === null) || (low !== null && high !== null
+      && (!Number.isFinite(low) || !Number.isFinite(high) || low <= 0 || high < low))) {
+      setError("倍數上下限須同時留空，或同時填寫有效正數區間。"); return;
+    }
+    if (low !== null && (!form.rationale.trim() || !form.sourceUrl.trim())) {
+      setError("提供倍數假設時，必須填寫假設理由及主要來源網址。"); return;
+    }
+    if (form.sourceUrl.trim() && !safeUrl(form.sourceUrl.trim())) { setError("來源必須是有效的 HTTP 或 HTTPS 網址。"); return; }
+    setBusy("SAVE"); setError(null); setMessage(null);
+    try {
+      const saved = await industryValuationApi.save(industryCode, { baseEffectiveAt: form.baseEffectiveAt,
+        modelCode: form.modelCode, primaryMetric: form.primaryMetric, assumedMultipleLow: low, assumedMultipleHigh: high,
+        rationale: form.rationale.trim() || null, sourceUrl: form.sourceUrl.trim() || null });
+      client.setQueryData(queryKey, saved);
+      setForm(null); setDraft(null);
+      setMessage("正式產業設定已保存；既有估值結果尚未重算。此設定適用整個產業，不只目前股票。");
+    } catch (failure) { setError(errorMessage(failure)); }
+    finally { setBusy(null); }
+  };
+  const recalculate = async () => {
+    if (!figi || !valuationDate || busy) return;
+    setBusy("RECALCULATE"); setError(null); setMessage(null);
+    try {
+      await industryValuationApi.recalculate(figi, valuationDate);
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["valuation-history", figi] }),
+        client.invalidateQueries({ queryKey: ["stock-screen"] }),
+      ]);
+      await reloadReport();
+      setMessage("此股指定估值日已完成重算並重新載入；以畫面回傳的可用指標及狀態為準。");
+    } catch (failure) { setError(errorMessage(failure)); }
+    finally { setBusy(null); }
+  };
 
-  return <Box component="section" aria-label={t("industryProposal.title")} sx={{ mt: 2 }}>
-    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{t("industryProposal.title")}</Typography>
-    <Stack spacing={2} sx={{ mt: 1 }}>
-      {!industryCode && <Typography variant="body2" color="text.secondary">{t("industryProposal.industryMissing")}</Typography>}
-      <Alert severity="info">{t("industryProposal.description")}</Alert>
-      {reviewQuery.isLoading && <CircularProgress size={24} />}
-      {(error || reviewQuery.isError) && <Alert severity="error">{error || errorMessage(reviewQuery.error)}</Alert>}
-      {review && <>
-        <Typography>{review.industry} · {review.industryCode}</Typography>
-        {review.unavailabilityReason && <Alert severity="warning">{review.unavailabilityReason}</Alert>}
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, xl: 6 }}><Paper variant="outlined" sx={{ p: 2, height: "100%" }} component="section" aria-label={t("industryProposal.current")}>
-            <Stack spacing={1}>
-              <Typography variant="h6">{t("industryProposal.current")}</Typography>
-              <Typography>{t("industryProposal.model")}: {codeText(review.valuationModelCode)}</Typography>
-              <Typography>{t("industryProposal.metric")}: {codeText(review.primaryValuationMetric)}</Typography>
-              {Object.entries(review.current.ranges).map(([metric, range]) => <Typography key={metric}>{codeText(metric)}: {formatRange(range?.low, range?.high)}</Typography>)}
-              <Typography>{t("industryProposal.asOf")}: {review.current.asOf ?? "—"}</Typography>
-              <Typography sx={{ whiteSpace: "pre-wrap" }}>{review.current.rationale || t("industryProposal.noRationale")}</Typography>
-              {sources(review.current.sourceUrls)}
-            </Stack>
-          </Paper></Grid>
-          <Grid size={{ xs: 12, xl: 6 }}><Paper variant="outlined" sx={{ p: 2, height: "100%" }} component="section" aria-label={t("industryProposal.proposal")}>
-            <Stack spacing={1}>
-              <Typography variant="h6">{t("industryProposal.proposal")}</Typography>
-              {proposal ? <>
-                <Chip label={t(`industryProposal.status.${proposal.status}`, { defaultValue: proposal.status })} sx={{ alignSelf: "flex-start" }} />
-                <Typography>{t("industryProposal.model")}: {codeText(proposal.valuationModelCode)}</Typography>
-                <Typography>{t("industryProposal.metric")}: {codeText(proposal.metric)}</Typography>
-                <Typography>{t("industryProposal.range")}: {formatRange(proposal.low, proposal.high)}</Typography>
-                <Typography>{t("industryProposal.asOf")}: {proposal.asOf}</Typography>
-                <Typography variant="body2">{t("industryProposal.createdAt")}: {formatHongKongDateTime(proposal.createdAt, i18n.resolvedLanguage ?? i18n.language)}</Typography>
-                <Typography sx={{ whiteSpace: "pre-wrap" }}>{proposal.rationale || t("industryProposal.noRationale")}</Typography>
-                {proposal.sources?.length ? proposal.sources.map((source, index) => <Box key={`${index}:${source.url}`}>
-                  <Typography variant="subtitle2">{source.title}</Typography>
-                  <Typography variant="caption">{t("industryProposal.publishedDate")}: {source.publishedDate}</Typography>
-                  {sources([source.url])}
-                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{source.evidence}</Typography>
-                </Box>) : sources(proposal.sourceUrls)}
-                {proposal.failureReason && <Alert severity="error">{proposal.failureReason}</Alert>}
-                {proposal.status === "DRAFT" && <Alert severity="warning">{t("industryProposal.approvalNotice")}</Alert>}
-              </> : <Typography>{t("industryProposal.noProposal")}</Typography>}
-            </Stack>
-          </Paper></Grid>
-        </Grid>
-      </>}
-      {status && <Alert severity={recalculation?.phase === "CONFIRMED" ? "success" : pendingRecalculation ? "info" : "warning"}>{status}</Alert>}
-      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-        {industryCode && <Button onClick={() => void refresh()} disabled={busy || reviewQuery.isFetching}>{t("industryProposal.refresh")}</Button>}
-        {review?.availableActions?.includes("PROPOSE") && <Button onClick={() => void act("PROPOSE")} disabled={busy || pendingRecalculation} variant="outlined">{t("industryProposal.propose")}</Button>}
-        {review?.availableActions?.includes("APPROVE") && proposal?.status === "DRAFT" && <Button onClick={() => void act("APPROVE")} disabled={busy || pendingRecalculation} variant="contained">{t("industryProposal.approve")}</Button>}
+  return <Paper component="section" aria-label="產業假設設定" variant="outlined" sx={{ p: 2.5, mt: 2 }}>
+    <Typography variant="h6" fontWeight={700}>產業假設設定</Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ my: 1 }}>AI 只產生待確認草稿，不自動保存。模型與指標選項由後端提供。</Typography>
+    {!industryCode && <Typography>報告尚未提供產業代碼，暫不能設定產業假設。</Typography>}
+    {reviewQuery.isLoading && industryCode && <CircularProgress size={22} />}
+    {(error || reviewQuery.isError) && <Alert severity="error" sx={{ my: 1 }}>{error || errorMessage(reviewQuery.error)}</Alert>}
+    {message && <Alert severity="info" sx={{ my: 1 }}>{message}</Alert>}
+    {figi && valuationDate && <Button onClick={() => void recalculate()} disabled={!!busy} sx={{ my: 1 }}>重算此股估值</Button>}
+    {busy && <Stack direction="row" spacing={1} alignItems="center"><CircularProgress size={18} /><Typography>{busy === "PROPOSE" ? "正在產生草稿，可能需要幾分鐘…" : "處理中…"}</Typography></Stack>}
+    {review && <>
+      <Typography>{review.industry} · {review.industryCode}</Typography>
+      {review.current ? <Stack spacing={0.5} sx={{ my: 1 }}>
+        <Typography>正式設定：{review.current.modelCode} · {metricLabel(review.current.primaryMetric)} · {formatNumber(review.current.assumedMultipleLow)}–{formatNumber(review.current.assumedMultipleHigh)} 倍</Typography>
+        <Typography variant="body2">生效時間（香港）：{formatHongKongDateTime(review.current.effectiveAt, "zh-HK")}</Typography>
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{review.current.rationale}</Typography>
+        {review.current.sourceUrl && safeUrl(review.current.sourceUrl) && <Link href={review.current.sourceUrl} target="_blank" rel="noopener noreferrer">正式設定來源</Link>}
+      </Stack> : <Typography color="text.secondary">尚無正式設定。</Typography>}
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ my: 1 }}>
+        {review.canPropose && <Button onClick={() => void propose()} variant="outlined" disabled={!!busy}>產生 AI 草稿</Button>}
+        <Button onClick={edit} disabled={!!busy}>手動設定</Button>
+        <Button onClick={() => void reviewQuery.refetch()} disabled={!!busy}>重新讀取設定</Button>
       </Stack>
-    </Stack>
-  </Box>;
+      {form && <Box sx={{ mt: 2 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>確認保存後才會修改正式設定，影響整個產業。草稿只保留在本頁，離開頁面不會保存。</Alert>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>可以先只保存模型及主要指標，倍數上下限同時留空；提供倍數假設時，理由及來源網址必須填寫。</Typography>
+        {draft && <Typography variant="body2" sx={{ mb: 1 }}>草稿參考日：{draft.asOf}</Typography>}
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, sm: 6 }}><FormControl fullWidth size="small"><InputLabel id="industry-model-label">模型</InputLabel>
+            <Select labelId="industry-model-label" label="模型" value={form.modelCode} onChange={event => setForm({ ...form, modelCode: event.target.value, primaryMetric: "" })}>
+              {Object.keys(review.supportedMetrics).map(code => <MenuItem key={code} value={code}>{code}</MenuItem>)}
+            </Select></FormControl></Grid>
+          <Grid size={{ xs: 12, sm: 6 }}><FormControl fullWidth size="small"><InputLabel id="industry-metric-label">主要指標</InputLabel>
+            <Select labelId="industry-metric-label" label="主要指標" value={form.primaryMetric} onChange={event => setForm({ ...form, primaryMetric: event.target.value })}>
+              {(review.supportedMetrics[form.modelCode] ?? []).map(code => <MenuItem key={code} value={code}>{metricLabel(code)}</MenuItem>)}
+            </Select></FormControl></Grid>
+          <Grid size={{ xs: 6 }}><TextField fullWidth size="small" label="假設倍數下限" type="number" inputProps={{ step: "any" }} value={form.low} onChange={event => setForm({ ...form, low: event.target.value })} /></Grid>
+          <Grid size={{ xs: 6 }}><TextField fullWidth size="small" label="假設倍數上限" type="number" inputProps={{ step: "any" }} value={form.high} onChange={event => setForm({ ...form, high: event.target.value })} /></Grid>
+          <Grid size={{ xs: 12 }}><TextField fullWidth multiline minRows={2} label="假設理由" value={form.rationale} onChange={event => setForm({ ...form, rationale: event.target.value })} /></Grid>
+          <Grid size={{ xs: 12 }}><TextField fullWidth size="small" label="正式設定來源網址" value={form.sourceUrl} onChange={event => setForm({ ...form, sourceUrl: event.target.value })} /></Grid>
+        </Grid>
+        {draft?.sources?.map((source, index) => <Box key={index} sx={{ my: 1 }}>
+          <Typography variant="subtitle2">{source.title} {source.publishedDate ? " · " + source.publishedDate : ""}</Typography>
+          {safeUrl(source.url) ? <Link href={source.url} target="_blank" rel="noopener noreferrer">{source.url}</Link> : <Typography>{source.url}</Typography>}
+          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{source.evidence}</Typography>
+        </Box>)}
+        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+          <Button variant="contained" onClick={() => void save()} disabled={!!busy}>確認保存正式設定</Button>
+          <Button onClick={() => { setForm(null); setDraft(null); }} disabled={!!busy}>捨棄草稿</Button>
+        </Stack>
+      </Box>}
+    </>}
+  </Paper>;
 }

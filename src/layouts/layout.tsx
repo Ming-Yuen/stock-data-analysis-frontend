@@ -38,7 +38,7 @@ const MENU_I18N_KEYS: Record<string, string> = {
   "/stockAnalysis": "menu.stockAnalysis",
   "/dataManagement": "menu.dataManagement",
   "/jobConfig": "menu.jobConfiguration",
-  "/watchlist": "menu.watchList",
+
   "/upload": "upload.title",
 };
 

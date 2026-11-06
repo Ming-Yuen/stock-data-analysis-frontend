@@ -523,7 +523,7 @@ const HomeDashboard: React.FC = () => {
                         </Typography>
                       </Box>
                       <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.5 }}>
-                        {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+                        {item.allDay && /^\d{4}-\d{2}-\d{2}$/.test(item.startsAt) ? item.startsAt : new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
                           dateStyle: "medium",
                           timeStyle: item.allDay ? undefined : "short",
                           timeZone: "Asia/Hong_Kong",

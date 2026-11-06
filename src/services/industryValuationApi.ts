@@ -1,30 +1,21 @@
 import { apiClient } from "./apiClient";
-import { apiConfig } from "../apiConfig";
-import { ApiResponse } from "./types/dto/apiResponse";
-import { EnquiryJobResponse, Job } from "./types/dto/batch";
-import { IndustryValuationApproval, IndustryValuationReview } from "./types/dto/industryValuation";
+import { IndustryValuationDraft, IndustryValuationReview, IndustryValuationUpdate } from "./types/dto/industryValuation";
+import { ValuationResult } from "./types/dto/valuation";
 
-const base = (code: string) => `industry-valuation/${encodeURIComponent(code)}`;
+const base = (code: string) => "industry-valuation/" + encodeURIComponent(code);
 
 export const industryValuationApi = {
   async review(code: string): Promise<IndustryValuationReview> {
     return (await apiClient.get<IndustryValuationReview>(base(code))).data;
   },
-  async propose(code: string): Promise<IndustryValuationReview> {
-    return (await apiClient.post<IndustryValuationReview>(`${base(code)}/proposals`)).data;
+  async propose(code: string): Promise<IndustryValuationDraft> {
+    // AI 請求使用後端的 deadline；不把通用 100 秒超時誤認為草稿失敗。
+    return (await apiClient.post<IndustryValuationDraft>(base(code) + "/proposals", undefined, { timeout: 0 })).data;
   },
-  async approve(code: string, id: string): Promise<IndustryValuationApproval> {
-    return (await apiClient.post<IndustryValuationApproval>(`${base(code)}/proposals/${encodeURIComponent(id)}/approve`)).data;
+  async save(code: string, input: IndustryValuationUpdate): Promise<IndustryValuationReview> {
+    return (await apiClient.put<IndustryValuationReview>(base(code) + "/config", input)).data;
   },
-  async job(taskCode: string): Promise<Job | null> {
-    const { data } = await apiClient.post<EnquiryJobResponse>(apiConfig.getJobList.url, {});
-    if (data.success === false) throw new Error(data.message);
-    return data.jobTaskList.find((job) => job.taskCode === taskCode) ?? null;
-  },
-  async recalculate(job: Job, figi: string): Promise<void> {
-    const { data } = await apiClient.post<ApiResponse>(apiConfig.launchJobList.url, {
-      taskCode: job.taskCode, taskGroup: job.taskGroup, jobParams: { figis: figi },
-    });
-    if (data.success === false) throw new Error(data.message);
+  async recalculate(figi: string, valuationDate: string): Promise<ValuationResult[]> {
+    return (await apiClient.post<ValuationResult[]>("valuation/recalculate", { figi, from: valuationDate, through: valuationDate })).data;
   },
 };

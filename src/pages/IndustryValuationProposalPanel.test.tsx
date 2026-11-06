@@ -1,173 +1,113 @@
 import React from "react";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { IndustryValuationProposalPanel, reportMatchesProposal } from "./IndustryValuationProposalPanel";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { IndustryValuationProposalPanel } from "./IndustryValuationProposalPanel";
 import { industryValuationApi } from "../services/industryValuationApi";
-import { IndustryValuationApproval, IndustryValuationReview } from "../services/types/dto/industryValuation";
-import { StockAnalysisReport } from "../services/types/dto/analysis";
-import { Job } from "../services/types/dto/batch";
-import { ActiveStatus } from "../services/types/enums/ActiveStatus";
-import resources from "../locales/en.json";
+import { IndustryValuationReview } from "../services/types/dto/industryValuation";
 
-jest.mock("../services/industryValuationApi", () => ({ industryValuationApi: {
-  review: jest.fn(), propose: jest.fn(), approve: jest.fn(), job: jest.fn(), recalculate: jest.fn(),
-} }));
-jest.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { resolvedLanguage: "en-GB" }, t: (key: string, options?: Record<string, unknown>) => {
-  const strings = require("../locales/en.json");
-  const value = key.split(".").reduce((node: any, part: string) => node?.[part], strings);
-  return typeof value === "string" ? value : options?.defaultValue ?? key;
-} }) }));
-
-const api = industryValuationApi as jest.Mocked<typeof industryValuationApi>;
+jest.mock("@tanstack/react-query", () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
+jest.mock("../services/industryValuationApi", () => ({ industryValuationApi: { propose: jest.fn(), save: jest.fn(), recalculate: jest.fn() } }));
 let review: IndustryValuationReview;
-let job: Job;
-let client: QueryClient;
 const reload = jest.fn();
-const labels = resources.industryProposal;
+const invalidate = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
-  review = {
-    industryCode: "I43", industry: "Semiconductors", valuationModelCode: "NON_FINANCIAL_OPERATING", primaryValuationMetric: "PE",
-    current: { ranges: { PE: { low: 12, high: 18 }, PB: null }, asOf: "2026-10-01", sourceUrls: ["https://example.com/current"], rationale: "Current rationale" },
-    latestProposal: { id: "draft-id", status: "DRAFT", valuationModelCode: "NON_FINANCIAL_OPERATING", metric: "PE", low: 15, high: 25,
-      asOf: "2026-11-04", sourceUrls: ["https://example.com/draft"], rationale: "Draft rationale", createdAt: "2026-11-04T01:00:00Z",
-      sources: [{ url: "https://example.com/draft", title: "Industry evidence", publishedDate: "2026-10-30", evidence: "Reported business margins support the stated assumptions." }],
-      completedAt: "2026-11-04T01:01:00Z", approvedAt: null, failureReason: null },
-    availableActions: ["PROPOSE", "APPROVE"], unavailabilityReason: null,
-  };
-  job = {
-    id: 1, taskCode: "BACKEND_VALUATION_TASK", taskGroup: "SCHEDULE",
-    jobParams: {}, jobClassPath: "StockValuationSnapshotDailyTask", cronExpression: "0 0 12 * * ?",
-    activeStatus: ActiveStatus.ACTIVE,
-  };
-  api.review.mockResolvedValue(review);
-  api.job.mockResolvedValue(job);
-  api.recalculate.mockResolvedValue();
+  review = { industryCode: "I43", industry: "半導體", current: {
+    effectiveAt: "2026-11-01T00:00:00Z", modelCode: "PE", primaryMetric: "PE", assumedMultipleLow: 10, assumedMultipleHigh: 20,
+    rationale: "既有假設", sourceUrl: null,
+  }, supportedMetrics: { PE: ["PE"], CASH_FLOW: ["PFCF"] }, canPropose: true };
+  (useQuery as jest.Mock).mockImplementation(() => ({ data: review, isLoading: false, isError: false, refetch: jest.fn() }));
+  invalidate.mockResolvedValue(undefined);
+  (useQueryClient as jest.Mock).mockReturnValue({ setQueryData: jest.fn(), invalidateQueries: invalidate });
+  (industryValuationApi.propose as jest.Mock).mockResolvedValue({
+    modelCode: "PE", primaryMetric: "PE", assumedMultipleLow: 15, assumedMultipleHigh: 25, asOf: "2026-11-06",
+    rationale: "待人工確認的假設", sources: [{ url: "https://example.test/research", title: "來源", publishedDate: "2026-11-05", evidence: "資料摘要" }],
+  });
+  (industryValuationApi.save as jest.Mock).mockResolvedValue(review);
+  (industryValuationApi.recalculate as jest.Mock).mockResolvedValue([]);
   reload.mockResolvedValue(null);
-  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } });
-});
-afterEach(() => { client.clear(); jest.useRealTimers(); });
-
-async function renderPanel() {
-  const rendered = render(<QueryClientProvider client={client}><IndustryValuationProposalPanel industryCode="I43" figi="NVDA-FIGI" reloadReport={reload} /></QueryClientProvider>);
-  await screen.findByText("Semiconductors · I43");
-  return rendered;
-}
-function approved(): IndustryValuationApproval {
-  return { review: { ...review, availableActions: ["PROPOSE"], latestProposal: { ...review.latestProposal!, status: "APPROVED", approvedAt: "2026-11-04T01:05:00Z" } },
-    recalculationRequired: true, recalculationTaskCode: job.taskCode };
-}
-function matchingReport(): StockAnalysisReport {
-  return { context: { figi: "NVDA-FIGI" }, valuation: { status: "AVAILABLE", value: { industryFairValueRange: {
-    status: "AVAILABLE", value: { modelCode: "PE", multipleQuantiles: { low: 15, high: 25 }, assumptions: {
-      industryCode: "I43", rangeSource: "AI_INDUSTRY_BASELINE", primaryValuationMetric: "PE", classificationAsOf: "2026-11-04", sourceUrls: "https://example.com/draft",
-    } }, reasons: [],
-  } } } } as unknown as StockAnalysisReport;
-}
-async function advance(milliseconds: number) {
-  await act(async () => { jest.advanceTimersByTime(milliseconds); });
-}
-
-test("shows current and draft assumptions inline without opening a popup or approving automatically", async () => {
-  await renderPanel();
-  expect(screen.queryByRole("dialog")).toBeNull();
-  expect(within(screen.getByRole("region", { name: labels.current })).getByText("P/E: 12 – 18 ×")).toBeTruthy();
-  expect(within(screen.getByRole("region", { name: labels.proposal })).getByText("Proposed multiple range: 15 – 25 ×")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "https://example.com/draft" }).getAttribute("href")).toBe("https://example.com/draft");
-  expect(screen.getByText("Draft rationale")).toBeTruthy();
-  expect(screen.getByText("Reported business margins support the stated assumptions.")).toBeTruthy();
-  expect(screen.getByText("Source published: 2026-10-30")).toBeTruthy();
-  expect(api.approve).not.toHaveBeenCalled();
-  expect(api.recalculate).not.toHaveBeenCalled();
 });
 
-test("uses backend actions and preserves the reason when an action is unavailable", async () => {
-  review.availableActions = [];
-  review.unavailabilityReason = "The backend requires a supported primary metric.";
-  await renderPanel();
-  expect(screen.queryByRole("button", { name: labels.propose })).toBeNull();
-  expect(screen.queryByRole("button", { name: labels.approve })).toBeNull();
-  expect(screen.getByText(review.unavailabilityReason)).toBeTruthy();
+test("keeps AI draft in the page and does not save or recalculate without confirmation", async () => {
+  render(<IndustryValuationProposalPanel industryCode="I43" figi="TEST" valuationDate="2026-11-05" reloadReport={reload} />);
+  fireEvent.click(screen.getByRole("button", { name: "產生 AI 草稿" }));
+  await screen.findByDisplayValue("待人工確認的假設");
+  expect(industryValuationApi.propose).toHaveBeenCalledWith("I43");
+  expect(industryValuationApi.save).not.toHaveBeenCalled();
+  expect(industryValuationApi.recalculate).not.toHaveBeenCalled();
 });
 
-test("polls a pending proposal into a draft and never approves it automatically", async () => {
-  jest.useFakeTimers();
-  const pending = { ...review, availableActions: [], latestProposal: { ...review.latestProposal!, status: "PENDING" as const, low: null, high: null } };
-  api.review.mockResolvedValueOnce(pending).mockResolvedValue(review);
-  await renderPanel();
-  await advance(2500);
-  expect(api.review).toHaveBeenCalledTimes(2);
-  expect(await screen.findByText(labels.status.DRAFT)).toBeTruthy();
-  expect(screen.queryByText(labels.status.PENDING)).toBeNull();
-  expect(screen.getByRole("button", { name: labels.approve })).toBeTruthy();
-  expect(api.approve).not.toHaveBeenCalled();
+test("saves a first model configuration without inventing multiples", async () => {
+  review = { ...review, current: null, canPropose: false };
+  render(<IndustryValuationProposalPanel industryCode="I43" figi="TEST" reloadReport={reload} />);
+  fireEvent.click(screen.getByRole("button", { name: "手動設定" }));
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "模型" }));
+  fireEvent.click(screen.getByRole("option", { name: "PE" }));
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "主要指標" }));
+  fireEvent.click(screen.getByRole("option", { name: "P/E" }));
+  fireEvent.click(screen.getByRole("button", { name: "確認保存正式設定" }));
+  await waitFor(() => expect(industryValuationApi.save).toHaveBeenCalledWith("I43", {
+    baseEffectiveAt: null, modelCode: "PE", primaryMetric: "PE",
+    assumedMultipleLow: null, assumedMultipleHigh: null, rationale: null, sourceUrl: null,
+  }));
+  expect(industryValuationApi.propose).not.toHaveBeenCalled();
+  expect(industryValuationApi.recalculate).not.toHaveBeenCalled();
 });
 
-test("shows generation failure details and permits only the backend retry action", async () => {
-  review.latestProposal = { ...review.latestProposal!, status: "FAILED", failureReason: "No primary source supports the proposed range." };
-  review.availableActions = ["PROPOSE"];
-  await renderPanel();
-  expect(screen.getByText(review.latestProposal.failureReason!)).toBeTruthy();
-  expect(screen.queryByRole("button", { name: labels.approve })).toBeNull();
-  api.propose.mockResolvedValue({ ...review, availableActions: [], latestProposal: { ...review.latestProposal, status: "PENDING" } });
-  fireEvent.click(screen.getByRole("button", { name: labels.propose }));
-  await waitFor(() => expect(api.propose).toHaveBeenCalledWith("I43"));
-  expect(api.approve).not.toHaveBeenCalled();
+test.each(["假設倍數下限", "假設倍數上限"])("rejects a partial range when %s alone is empty", label => {
+  render(<IndustryValuationProposalPanel industryCode="I43" figi="TEST" reloadReport={reload} />);
+  fireEvent.click(screen.getByRole("button", { name: "手動設定" }));
+  fireEvent.change(screen.getByLabelText(label), { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "確認保存正式設定" }));
+  expect(screen.getByText("倍數上下限須同時留空，或同時填寫有效正數區間。")).toBeTruthy();
+  expect(industryValuationApi.save).not.toHaveBeenCalled();
 });
 
-test("explicit approval launches once for this FIGI and confirms the updated report", async () => {
-  jest.useFakeTimers();
-  api.approve.mockResolvedValue(approved());
-  reload.mockResolvedValue(matchingReport());
-  await renderPanel();
-  const button = screen.getByRole("button", { name: labels.approve });
-  fireEvent.click(button);
-  fireEvent.click(button);
-  await waitFor(() => expect(api.recalculate).toHaveBeenCalledTimes(1));
-  expect(api.approve).toHaveBeenCalledTimes(1);
-  expect(api.approve).toHaveBeenCalledWith("I43", "draft-id");
-  expect(api.recalculate).toHaveBeenCalledWith(job, "NVDA-FIGI");
-  await advance(3000);
-  await waitFor(() => expect(reload).toHaveBeenCalled());
-  expect(screen.getAllByText(labels.recalculation.CONFIRMED).length).toBeGreaterThan(0);
+test.each([
+  { rationale: "", sourceUrl: "https://example.test/research" },
+  { rationale: "人工確認的假設", sourceUrl: "" },
+  { rationale: "人工確認的假設", sourceUrl: "ftp://example.test/research" },
+])("requires a rationale and HTTP source for nonempty multiples: $sourceUrl / $rationale", input => {
+  review = { ...review, current: { ...review.current!, ...input } };
+  render(<IndustryValuationProposalPanel industryCode="I43" figi="TEST" reloadReport={reload} />);
+  fireEvent.click(screen.getByRole("button", { name: "手動設定" }));
+  fireEvent.click(screen.getByRole("button", { name: "確認保存正式設定" }));
+  expect(industryValuationApi.save).not.toHaveBeenCalled();
 });
 
-test("a stale report stays unconfirmed after polling, and manual refresh shows the mismatch", async () => {
-  jest.useFakeTimers();
-  api.approve.mockResolvedValue(approved());
-  await renderPanel();
-  fireEvent.click(screen.getByRole("button", { name: labels.approve }));
-  await advance(1);
-  await advance(3000);
-  expect(reload).toHaveBeenCalled();
-  expect(screen.queryByText(labels.recalculation.CONFIRMED)).toBeNull();
-  expect(screen.getByText(labels.recalculation.QUEUED)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: labels.refresh }));
-  await waitFor(() => expect(screen.getByText(labels.reportMismatch)).toBeTruthy());
+test("preserves the draft baseEffectiveAt even when current config refreshes", async () => {
+  const view = render(<IndustryValuationProposalPanel industryCode="I43" figi="TEST" reloadReport={reload} />);
+  fireEvent.click(screen.getByRole("button", { name: "產生 AI 草稿" }));
+  await screen.findByDisplayValue("待人工確認的假設");
+  review = { ...review, current: { ...review.current!, effectiveAt: "2026-11-06T00:00:00Z" } };
+  view.rerender(<IndustryValuationProposalPanel industryCode="I43" figi="TEST" reloadReport={reload} />);
+  fireEvent.click(screen.getByRole("button", { name: "確認保存正式設定" }));
+  await waitFor(() => expect(industryValuationApi.save).toHaveBeenCalledWith("I43", {
+    baseEffectiveAt: "2026-11-01T00:00:00Z", modelCode: "PE", primaryMetric: "PE", assumedMultipleLow: 15, assumedMultipleHigh: 25,
+    rationale: "待人工確認的假設", sourceUrl: "https://example.test/research",
+  }));
+  expect(industryValuationApi.recalculate).not.toHaveBeenCalled();
 });
 
-test("enqueues once using job configuration alone, and leaving the page does not discard the request", async () => {
-  jest.useFakeTimers();
-  api.approve.mockResolvedValue(approved());
-  const rendered = await renderPanel();
-  fireEvent.click(screen.getByRole("button", { name: labels.approve }));
-  await waitFor(() => expect(api.recalculate).toHaveBeenCalledTimes(1));
-  expect(api.recalculate).toHaveBeenCalledWith(job, "NVDA-FIGI");
-  rendered.unmount();
-  await advance(10000);
-  expect(api.recalculate).toHaveBeenCalledTimes(1);
-  expect(api.approve).toHaveBeenCalledTimes(1);
+test.each([
+  { industryCode: undefined, failed: false },
+  { industryCode: "I43", failed: true },
+])("allows first recalculation without an industry review: $industryCode / $failed", async ({ industryCode, failed }) => {
+  (useQuery as jest.Mock).mockReturnValue({ data: undefined, isLoading: false, isError: failed, error: failed ? new Error("REVIEW_UNAVAILABLE") : null });
+  render(<IndustryValuationProposalPanel industryCode={industryCode} figi="TEST" valuationDate="2026-11-05" reloadReport={reload} />);
+  expect(industryValuationApi.recalculate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "重算此股估值" }));
+  await waitFor(() => expect(industryValuationApi.recalculate).toHaveBeenCalledWith("TEST", "2026-11-05"));
+  await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+  expect(industryValuationApi.save).not.toHaveBeenCalled();
 });
 
-test.each(["figi", "range", "date", "source", "metric", "unavailable"])("report matching rejects a mismatched %s", (field) => {
-  const report = matchingReport();
-  const range = report.valuation.value!.industryFairValueRange!;
-  if (field === "figi") report.context.figi = "OTHER-FIGI";
-  if (field === "range") range.value!.multipleQuantiles!.low = 10;
-  if (field === "date") range.value!.assumptions!.classificationAsOf = "2026-10-01";
-  if (field === "source") range.value!.assumptions!.sourceUrls = "https://example.com/old";
-  if (field === "metric") range.value!.modelCode = "PS";
-  if (field === "unavailable") range.status = "UNVERIFIED";
-  expect(reportMatchesProposal(report, "NVDA-FIGI", "I43", review.latestProposal!)).toBe(false);
+test("only recalculates the explicitly selected stock and valuation date", async () => {
+  render(<IndustryValuationProposalPanel industryCode="I43" figi="TEST" valuationDate="2026-11-05" reloadReport={reload} />);
+  fireEvent.click(screen.getByRole("button", { name: "重算此股估值" }));
+  await waitFor(() => expect(industryValuationApi.recalculate).toHaveBeenCalledWith("TEST", "2026-11-05"));
+  await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ["valuation-history", "TEST"] });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ["stock-screen"] });
 });

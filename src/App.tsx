@@ -5,7 +5,7 @@ import Layout from "./layouts/layout";
 import { JobManagementPage } from "./pages/JobManagement";
 import { useFetch } from "./hooks/api/useApi";
 import { apiConfig } from "./apiConfig";
-import { WatchListPage } from "./pages/Watchlist";
+import { StockScreenerPage } from "./pages/StockScreener";
 import { MenuTree, MenuEnquiryResponse } from "./services/types/dto/menu";
 import { DataUploadPage } from "./pages/DataUpload";
 import HomeDashboard from "./pages/HomeDashboard";
@@ -25,10 +25,10 @@ const PAGE_CONFIG_MAP: Record<string, PageConfig> = {
   "/upload": { component: DataUploadPage },
   "/jobConfig": { component: JobManagementPage },
   "/Home": { component: JobManagementPage },
-  "/watchlist": { component: WatchListPage },
+
   // 在这里添加更多页面映射
   // 'stockAnalysis': { component: StockAnalysisPage },
-  "/stockAnalysis": { component: WatchListPage },
+
   // 'userManagement': { component: UserManagementPage },
   // '/userManagement': { component: UserManagementPage },
   // 'dataManagement': { component: DataManagementPage },
@@ -95,6 +95,7 @@ const App: React.FC = () => {
         {/* 动态生成的路由 */}
         {generateRoutes(menuTrees)}
 
+        <Route path="stockAnalysis" element={<StockScreenerPage />} />
         <Route path="stockAnalysis/:figi" element={<StockAnalysisPage />} />
 
         {/* 404 */}
