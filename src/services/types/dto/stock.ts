@@ -3,7 +3,7 @@ export interface StockConcept { code: string; name: string; }
 export interface StockClassification {
   code: string;
   industry: string;
-  futuPlateCode: string | null;
+  sourcePlateCode: string | null;
 }
 
 export interface StockClassificationResponse {

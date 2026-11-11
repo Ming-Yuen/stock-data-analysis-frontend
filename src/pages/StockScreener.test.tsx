@@ -14,7 +14,7 @@ beforeEach(() => {
   (useQuery as jest.Mock).mockImplementation((options: any) => ({
     isFetching: false, isError: false,
     data: options.queryKey[0] === "stock-classifications" ? {
-      classifications: [{ code: "I1", industry: "科技", futuPlateCode: null }, { code: "I2", industry: "銀行", futuPlateCode: null }],
+      classifications: [{ code: "I1", industry: "科技", sourcePlateCode: null }, { code: "I2", industry: "銀行", sourcePlateCode: null }],
       concepts: [{ code: "AI", name: "人工智能" }, { code: "CLOUD", name: "雲端" }],
     } : { items: [{ figi: "TEST-FIGI", symbol: "TEST", name: "測試公司", stockType: "CS", industryCode: "I1", industry: "科技",
       concepts: [{ code: "AI", name: "人工智能" }, { code: "CLOUD", name: "雲端" }],
