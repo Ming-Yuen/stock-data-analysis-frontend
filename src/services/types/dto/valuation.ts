@@ -2,6 +2,9 @@ export interface ValuationMetric {
   value: number | null;
   status: string;
   reasonCode: string | null;
+  financialSource?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
 }
 
 export interface ValuationReference {
@@ -22,6 +25,10 @@ export interface ValuationResult {
   valuationDate: string;
   analysisAsOf: string;
   calculatedAt: string;
+  financialObservedAt?: string | null;
+  sharesObservedAt?: string | null;
+  marketCapSource?: string | null;
+  secFinancialAvailableFromDate?: string | null;
   currency: string | null;
   price: number | null;
   industryCode: string | null;

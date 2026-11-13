@@ -1,4 +1,5 @@
 import React from "react";
+import "@testing-library/jest-dom";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useQuery } from "@tanstack/react-query";
 import { StockAnalysisPage } from "./StockAnalysis";
@@ -68,6 +69,33 @@ test("does not display unavailable values or coerce missing values into zero", (
   expect(formatNumber(0)).toBe("0.00");
 });
 
+test("displays after-close share observation time on the single daily valuation", () => {
+  report.valuation.analysisAsOf = "2026-11-12T21:00:00Z";
+  report.valuation.sharesObservedAt = "2026-11-13T02:10:32Z";
+  render(<StockAnalysisPage />);
+  expect(screen.getByText(/股數取得時間（香港）/)).toHaveTextContent("10:10");
+});
+
+test("does not show an after-close label when shares were already observed", () => {
+  report.valuation.analysisAsOf = "2026-11-12T21:00:00Z";
+  report.valuation.sharesObservedAt = "2026-11-12T20:00:00Z";
+  render(<StockAnalysisPage />);
+  expect(screen.queryByText(/收市估算使用收市後取得的股數/)).not.toBeInTheDocument();
+});
+
+test("nonpositive free cash flow displays not meaningful instead of an available negative multiple", () => {
+  report.valuation.metrics.pfcf = { value: null, status: "NOT_APPLICABLE", reasonCode: "NON_POSITIVE_FCF" };
+  render(<StockAnalysisPage />);
+  expect(screen.getByText(/自由現金流非正，P\/FCF 不適用（N.M.）/)).toBeInTheDocument();
+  expect(screen.getByText("25.00")).toBeInTheDocument();
+});
+
+test("nonpositive earnings displays loss or zero earnings as not applicable", () => {
+  report.valuation.metrics.pe = { value: null, status: "NOT_APPLICABLE", reasonCode: "NON_POSITIVE_EPS" };
+  render(<StockAnalysisPage />);
+  expect(screen.getByText(/每股盈利非正（虧損或零盈利），PE 不適用（N.M.）/)).toBeInTheDocument();
+});
+
 test("history chart leaves gaps rather than inventing observations", () => {
   render(<SeriesChart title="測試歷史" points={[
     { date: "2026-01-01", value: 10 }, { date: "2026-02-01", value: null }, { date: "2026-03-01", value: 20 },
@@ -75,4 +103,11 @@ test("history chart leaves gaps rather than inventing observations", () => {
   const path = screen.getByRole("img", { name: "測試歷史" }).querySelector("path")!.getAttribute("d")!;
   expect(path.split("M").length - 1).toBe(2);
   expect(path.includes("L")).toBe(false);
+});
+
+test("shows SEC financial source and actual TTM interval without replacing valuation date", () => {
+  report.valuation.metrics.ps = { ...metric(7), financialSource: "SEC", periodStart: "2025-07-01", periodEnd: "2026-06-30" };
+  render(<StockAnalysisPage />);
+  expect(screen.getByText(/SEC 財務.*2025-07-01～2026-06-30/)).toBeInTheDocument();
+  expect(screen.getByText("7.00")).toBeInTheDocument();
 });

@@ -18,8 +18,12 @@ export const readableState = (t: TFunction, code?: string | null) => code
   ? t("analysisReport.states." + code, { defaultValue: statusLabel(code) }) : "—";
 export const readableReason = (t: TFunction, reason: AnalysisReason) => t("analysisReport.reasons." + reason.code,
   { ...reason.params, defaultValue: reason.message || reason.code });
-export const reasonLabel = (t: TFunction, code?: string | null) => code
-  ? t("analysisReport.reasons." + code, { defaultValue: code }) : "沒有可用資料";
+export const reasonLabel = (t: TFunction, code?: string | null) => {
+  if (!code) return "沒有可用資料";
+  const fallback = code === "NON_POSITIVE_FCF" ? "自由現金流非正，P/FCF 不適用（N.M.）"
+    : code === "NON_POSITIVE_EPS" ? "每股盈利非正（虧損或零盈利），PE 不適用（N.M.）" : code;
+  return t("analysisReport.reasons." + code, { defaultValue: fallback });
+};
 const metricLabels: Record<string, string> = {
   pe: "P/E", pb: "P/B", ps: "P/S", pfcf: "P/FCF", evEbitda: "EV/EBITDA",
   PE: "P/E", PB: "P/B", PS: "P/S", PFCF: "P/FCF", EV_EBITDA: "EV/EBITDA",

@@ -57,6 +57,10 @@ export function StockAnalysisPage() {
     {reportQuery.isFetching && <Stack direction="row" spacing={1} alignItems="center" sx={{ my: 2 }}><CircularProgress size={22} /><Typography>正在載入分析…</Typography></Stack>}
     {reportQuery.isError && <Alert severity="error">{error?.response?.data?.message || error?.message || "股票分析載入失敗。"}</Alert>}
     {report && <>
+      {valuation?.sharesObservedAt && valuation.analysisAsOf
+        && Date.parse(valuation.sharesObservedAt) > Date.parse(valuation.analysisAsOf) && <Alert severity="info" sx={{ mb: 2 }}>
+        收市估算使用收市後取得的股數。股數取得時間（香港）：{formatHongKongDateTime(valuation.sharesObservedAt, "zh-HK")}。
+      </Alert>}
       {valuation?.status !== "AVAILABLE" && <Alert severity="info" sx={{ mb: 2 }}>
         估值狀態：{statusLabel(valuation?.status)} · {reasonLabel(t, valuation?.reasonCode)}。個別可用指標仍會顯示。
       </Alert>}
@@ -69,6 +73,9 @@ export function StockAnalysisPage() {
           <Paper variant="outlined" sx={{ p: 2, height: "100%" }}>
             <Typography variant="caption" color="text.secondary">{metricLabel(code)}</Typography>
             <Typography variant="h6">{result.status === "AVAILABLE" ? formatNumber(result.value) : "—"}</Typography>
+              {result.financialSource === "SEC" && <Typography variant="caption" color="text.secondary">
+                SEC 財務{result.periodEnd && ` · ${result.periodStart ? `${result.periodStart}～` : ""}${result.periodEnd}`}
+              </Typography>}
             {result.status !== "AVAILABLE" && <Typography variant="caption" color="text.secondary">{statusLabel(result.status)} · {reasonLabel(t, result.reasonCode)}</Typography>}
           </Paper>
         </Grid>)}
